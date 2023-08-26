@@ -2,3 +2,6 @@
 *.toml.bak
 *.py.bak
 dist/
+Notebooks/
+__pycache__/
+mls/
