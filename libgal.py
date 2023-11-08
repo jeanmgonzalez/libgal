@@ -178,12 +178,15 @@ class sqlalchemy:
     - logmech (String): Parámetro Opcional que indica el método de autenticación del usuario. LDAP por defecto
     """
     
-    def __init__(self, driver, host, user, password, logmech="LDAP"):
+    def __init__(self, driver, host, user, password, logmech="LDAP", pool_recycle=1800, pool_size=20):
     
         if driver.lower()=="teradata":
-             self.engine = create_engine(f"teradatasql://{user}:{password}@{host}/?logmech={logmech.upper()}")
+            if timeout_seconds:
+                self.engine = create_engine(f"teradatasql://{user}:{password}@{host}/?logmech={logmech.upper()}", pool_recycle=pool_recycle, pool_size=pool_size, connect_args={'connect_timeout': timeout_seconds})
+            else:
+                self.engine = create_engine(f"teradatasql://{user}:{password}@{host}/?logmech={logmech.upper()}", pool_recycle=pool_recycle, pool_size=pool_size)
         elif driver.lower()=="mysql":
-            self.engine = create_engine(f"mysql+mysqlconnector://{user}:{password}@{host}/")
+            self.engine = create_engine(f"mysql+mysqlconnector://{user}:{password}@{host}/", pool_recycle=pool_recycle, pool_size=pool_size)
             
         
     def Session(self):
