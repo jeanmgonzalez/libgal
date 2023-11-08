@@ -7,6 +7,10 @@ import pandas as pd
 from sqlalchemy import create_engine
 from libgal.modules.Logger import Logger
 from libgal.modules.ODBCTools import upsert_by_primary_key, load_table, inserts_from_dataframe
+from time import sleep
+from teradataml.context.context import create_context
+from teradataml.dataframe.fastload import fastload
+from teradatasql import OperationalError as tdOperationalError
 
 logger = Logger.__call__().get_logger()
 
@@ -133,17 +137,20 @@ class DatabaseError(Exception):
 class TeradataDB:
 
     def __init__(self,
-                 host: str, user: str, passw: str,
+                 host: str, user: str, passw: str, db: Optional[str] = None,
                  logmech: Optional[str] = None, charset: str = 'iso-8859-15',
                  url_params: Optional[str] = None):
         self.charset = charset
+        self.tml_connected = False
+        self.context = None
+
         success, drivers = self.check_drivers()
         logger.info(f'Realizando conexión a la base de datos {host} con usuario {user}')
         td_drivers = [d for d in drivers if 'teradata' in d.lower()]
         if success and len(td_drivers) > 0:
             driver_name = td_drivers[0]
             logger.info(f'Utilizando driver: {driver_name}')
-            if 'ldap' in logmech.lower():
+            if 'ldap' not in logmech.lower():
                 self.odbclink = 'DRIVER={DRIVERNAME};DBCNAME={hostname};UID={uid};PWD={pwd}'.format(
                     DRIVERNAME=driver_name, hostname=host,
                     uid=user, pwd=passw)
@@ -154,7 +161,8 @@ class TeradataDB:
 
             self.slalink = f'teradata:///?username={user}&password={passw}&host={host}?charset={self.charset}'
             self.conn, self.eng = self.connect()
-            self.test()
+            if db is not None:
+                self.tml_connect(host, user, passw, db, logmech)
 
     def check_drivers(self):
         drivers = pyodbc.drivers()
@@ -167,6 +175,9 @@ class TeradataDB:
 
     def use_db(self, db):
         self.do(f'DATABASE {db};')
+
+    def execute(self, query):
+        return self.do(query)
 
     def do(self, query):
         c = self.conn.cursor()
@@ -227,9 +238,10 @@ class TeradataDB:
         else:
             return pd.read_sql(query, self.connection)
 
-    def test(self):
+    def current_date(self) -> datetime.date:
         query = "select current_date;"
-        return self.query(query)
+        result_df = self.query(query)
+        return result_df['Current Date'][0]
 
     def show_tables(self, db, prefix):
         query = f"""SELECT  DatabaseName,
@@ -296,3 +308,32 @@ class TeradataDB:
     @property
     def engine(self):
         return self.eng
+
+    def tml_connect(self, host, user, passw, db, logmech=None):
+        if logmech is None:
+            context = create_context(host=host, user=user, password=passw, database=db)
+        else:
+            context = create_context(host=host, user=user, password=passw, logmech=logmech, database=db)
+
+        self.context = context
+        self.tml_connected = True
+        return context
+
+    def fastload(self, df, schema, table, pk, index=False):
+        if not self.tml_connected:
+            raise DatabaseError(
+                'Fastload solo se puede usar si se inicializa Teradata especificando un schema en el argumento db'
+            )
+        fastload(df, schema_name=schema, table_name=table, primary_index=pk, index=index)
+
+    def retry_fastload(self, df, schema, table, pk, retries=30, retry_sleep=20):
+        while retries > 0:
+            try:
+                self.fastload(df, schema=schema, table=table, pk=pk, index=False)
+                break
+            except tdOperationalError as e:
+                if '2663' in e:
+                    sleep(retry_sleep)
+                    retries -= 1
+                else:
+                    raise e
