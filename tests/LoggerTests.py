@@ -1,3 +1,4 @@
+import libgal
 from libgal import logger as Logger
 import unittest
 
@@ -13,8 +14,12 @@ class LoggerTests(unittest.TestCase):
         logger.info('Test INFO CSV')
 
     def test_other(self):
-        logger = Logger('None', __name__)
-        logger.info('Test INFO None')
+        passes = False
+        try:
+            logger = Logger(None, __name__)
+        except libgal.LoggerFormatException as e:
+            passes = True
+        assert passes, 'Se espera que lance LoggerFormatException si no se provee un formato válido'
 
 
 if __name__ == '__main__':

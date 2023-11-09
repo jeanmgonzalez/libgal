@@ -12,7 +12,7 @@ from teradataml.context.context import create_context
 from teradataml.dataframe.fastload import fastload
 from teradatasql import OperationalError as tdOperationalError
 
-logger = Logger.__call__().get_logger()
+logger = Logger(dirname=None).get_logger()
 
 
 class Scripting:

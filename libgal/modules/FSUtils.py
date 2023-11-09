@@ -5,7 +5,7 @@ from time import time
 
 from libgal.modules.Logger import Logger
 
-logger = Logger.__call__().get_logger()
+logger = Logger(dirname=None).get_logger()
 
 OUTPUT_DIRS = ['output', 'logs']
 DB_DIR = ['db']

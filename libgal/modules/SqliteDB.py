@@ -4,8 +4,9 @@ import sqlalchemy
 from libgal.modules.Logger import Logger
 import re
 from libgal.modules.ODBCTools import upsert_by_primary_key, load_table, load_sql
+from libgal.modules.Utils import drop_lists
 
-logger = Logger.__call__().get_logger()
+logger = Logger(dirname=None).get_logger()
 
 
 class SqliteDB:
@@ -15,6 +16,9 @@ class SqliteDB:
         self.conn = self.eng.raw_connection()
         self.should_drop_tables = drop_tables
         self.create_tables()
+
+    def execute(self, query):
+        return self.do(query)
 
     def do(self, query):
         c = self.conn.cursor()
@@ -85,20 +89,9 @@ class SqliteDB:
         result_df = pd.read_sql_query(query, self.conn)
         return not result_df.empty
 
-    # TODO: extraer los list en otro df
     @staticmethod
     def drop_lists(df):
-        to_drop = list()
-        for attribute_name, order_data in df.items():
-            for element in df[attribute_name]:
-                if isinstance(element, list):
-                    to_drop.append(attribute_name)
-                    break
-
-        return df.drop(
-            to_drop,
-            axis=1, errors='ignore'
-        ), None
+        return drop_lists(df)
 
     @property
     def connection(self):
