@@ -22,11 +22,11 @@ host, db, usr, passw, logmech = ask_user_pwd()
 logger.info('Generando dataframe de prueba')
 test_df: DataFrame = generate_dataframe(num_rows=500000)
 logger.info('Realizando conexiones a la base de datos')
-t_start = time()
+t_st = time()
 teradata = TeradataDB(host=host, user=usr, passw=passw, db=db, logmech=logmech)
-t_conn = time() - t_start
-logger.info(f'Tiempo de conexión: {round(t_conn, 2)} s')
+t_conn = time() - t_st
 logger.info('Conexión exitosa')
+logger.info(f'Tiempo de conexión: {round(t_conn, 2)} s')
 
 
 class TeradataTests(unittest.TestCase):
@@ -42,34 +42,80 @@ class TeradataTests(unittest.TestCase):
         t_qry = time() - t_start
         logger.info(f'Tiempo de lectura: {round(t_qry, 2)} s')
 
-    def test_fastload(self):
+    def test(self):
         schema = 'p_staging'
-        table = 'STG_TERADATAML_FASTLOAD_TEST'
-        try:
-            self.td.drop_table(schema, table)
-        except pyodbc.ProgrammingError:
-            pass
-        logger.info(f'Escribiendo tabla con {len(test_df)} filas vía Fastload')
+        dl_schema = 'p_dw_tables'
+        flname = 'STG_TERADATAML_FASTLOAD_TEST_V2'
+        dbcname = 'STG_TERADATAML_ODBC_TEST_V2'
+        dw_table = 'STG_TERADATAML_STAGINGLOAD_TEST_V2'
+        self.staging_load(schema, dbcname, dl_schema, dw_table, 'Log_Id')
+        self.odbc(schema, dbcname, flname)
+        self.verify_tables(schema, dbcname, dl_schema, dw_table)
+        self.fastload(schema, flname)
+        self.post_checks(schema, flname, dbcname)
+        # self.cleanup(schema, [dbcname, flname])
+        # self.cleanup(dl_schema, [dw_table])
+
+    def staging_load(self, schema, dbcname, dl_schema, dw_table, pk):
         t_start = time()
-        self.td.retry_fastload(test_df, schema, table, pk='ID')
+        self.td.staging_insert(test_df, schema, dbcname, dl_schema, dw_table, pk)
+        t_qry = time() - t_start
+        logger.info(f'La carga (insert) tardó {round(t_qry, 2)} s')
+
+        t_start = time()
+        self.td.staging_upsert(test_df, schema, dbcname, dl_schema, dw_table, pk)
+        t_qry = time() - t_start
+        logger.info(f'La carga (upsert) tardó {round(t_qry, 2)} s')
+
+    def fastload(self, schema, table):
+        self.td.forced_drop_table(schema, table)
+        logger.info(f'Escribiendo tabla con {len(test_df)} filas vía Fastload')
+
+        t_start = time()
+        self.td.retry_fastload(df=test_df, schema=schema, table=table, pk='Log_Id')
         t_qry = time() - t_start
         logger.info(f'La carga tardó {round(t_qry, 2)} s')
-        self.odbc(table)
 
-    def odbc(self, flname):
-        schema = 'p_staging'
-        table = 'STG_TERADATAML_ODBC_TEST'
-        try:
-            self.td.drop_table(schema, table)
-        except pyodbc.ProgrammingError:
-            pass
+    def odbc(self, schema, table, flname):
+        self.td.forced_drop_table(schema, table)
         logger.info(f'Realizando copia de la DDL de la tabla creada con Fastload')
         self.td.create_table_like(schema, table, schema, flname)
-        logger.info(f'Escribiendo tabla con {len(test_df)} filas vía ODBC')
+        logger.info(f'Escribiendo tabla con {len(test_df)} filas vía insert_dataframe')
         t_start = time()
-        test_df.to_sql(name=table, con=self.td.engine, schema=schema, if_exists='append', index=False)
+        self.td.insert(test_df, schema, table, 'Log_Id')
         t_qry = time() - t_start
         logger.info(f'La carga tardó {round(t_qry, 2)} s')
+
+    def cleanup(self, schema, table_list):
+        for table in table_list:
+            self.td.drop_table(schema, table)
+
+    def verify_tables(self, schema, fltable, schema_b, dbctable):
+        difference = self.td.diff(schema, fltable, schema_b, dbctable)
+        if len(difference) > 0:
+            logger.error("Las tablas difieren en calidad o cantidad de registros")
+            logger.debug(difference.to_dict())
+            return False
+        return True
+
+    def upsert_stage(self, schema, fltable, dbctable):
+        logger.info(f'Verificando UPSERT')
+        t_start = time()
+        self.td.upsert(df=test_df, schema=schema, table=dbctable, pk='Log_Id', odbc_limit=len(test_df))
+        t_qry = time() - t_start
+        logger.info(f'La carga tardó {round(t_qry, 2)} s')
+        assert self.verify_tables(schema, fltable, schema, dbctable)
+
+    def delete(self, schema, table, pk):
+        self.td.do(f'DELETE FROM {schema}.{table} WHERE {pk} BETWEEN 1 AND 100;')
+
+    def post_checks(self, schema, fltable, dbctable):
+        logger.info('Verificando si hay diferencias de registros entre tablas')
+        assert self.verify_tables(schema, fltable, schema, dbctable)
+        self.delete(schema, dbctable, 'Log_Id')
+        assert not self.verify_tables(schema, fltable, schema, dbctable), \
+            "La función de comparación de tablas no funciona correctamente"
+        self.upsert_stage(schema, fltable, dbctable)
 
 
 if __name__ == '__main__':

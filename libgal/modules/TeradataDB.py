@@ -1,16 +1,20 @@
 import datetime
 import math
-from typing import Optional
+from typing import Optional, List
 
 import pyodbc
 import pandas as pd
+from pandas import DataFrame
 from sqlalchemy import create_engine
+
+from libgal.modules.DatabaseAPI import DatabaseAPI
 from libgal.modules.Logger import Logger
-from libgal.modules.ODBCTools import upsert_by_primary_key, load_table, inserts_from_dataframe
+from libgal.modules.ODBCTools import load_table, inserts_from_dataframe
 from time import sleep
 from teradataml.context.context import create_context
 from teradataml.dataframe.fastload import fastload
 from teradatasql import OperationalError as tdOperationalError
+from libgal.modules.Utils import chunks_df, chunks
 
 logger = Logger(dirname=None).get_logger()
 
@@ -134,7 +138,7 @@ class DatabaseError(Exception):
     pass
 
 
-class TeradataDB:
+class TeradataDB(DatabaseAPI):
 
     def __init__(self,
                  host: str, user: str, passw: str, db: Optional[str] = None,
@@ -164,7 +168,8 @@ class TeradataDB:
             if db is not None:
                 self.tml_connect(host, user, passw, db, logmech)
 
-    def check_drivers(self):
+    @staticmethod
+    def check_drivers():
         drivers = pyodbc.drivers()
         if len(drivers) > 0:
             logger.info(f'Drivers ODBC detectados: {drivers}')
@@ -176,10 +181,7 @@ class TeradataDB:
     def use_db(self, db):
         self.do(f'DATABASE {db};')
 
-    def execute(self, query):
-        return self.do(query)
-
-    def do(self, query):
+    def do(self, query: str):
         c = self.conn.cursor()
         if isinstance(query, list):
             query_len = len(query)
@@ -231,7 +233,7 @@ class TeradataDB:
         eng = self.engine_connect()
         return conn, eng
 
-    def query(self, query, mode='normal'):
+    def query(self, query: str, mode: str = 'normal') -> DataFrame:
         logger.info(f'Ejecutando query: {query}')
         if mode == 'normal':
             return pd.read_sql(query, self.engine)
@@ -243,7 +245,7 @@ class TeradataDB:
         result_df = self.query(query)
         return result_df['Current Date'][0]
 
-    def show_tables(self, db, prefix):
+    def show_tables(self, db: str, prefix: str) -> DataFrame:
         query = f"""SELECT  DatabaseName,
             TableName,
             CreateTimeStamp,
@@ -256,47 +258,40 @@ class TeradataDB:
         """
         return self.query(query)
 
-    def _upsert_by_primary_key(self, schema, table, df, primary_key):
-        df_from = pd.read_sql(f"SELECT {primary_key} FROM {schema}.{table};", self.eng)
-        if df_from.empty:
-            logger.debug(f'No hay registros insertados para el pk {primary_key} en {schema}.{table}')
-            df.to_sql(table, self.eng, if_exists='append', index=False, schema=schema)
-            df_result = df
-        else:
-            df_result = df[~df[primary_key].isin(df_from[primary_key])]
-            if not df_result.empty:
-                logger.info(f'{len(df_from)} registros ya insertados, insertando novedades ({len(df_result)} registros) en {schema}.{table}')
-                df_result.to_sql(table, self.eng, if_exists='append', index=False, schema=schema)
-            else:
-                logger.info(f'{len(df_from)} registros ya insertados, no se realizan acciones')
-        return df_result
-
-    def _log_inserts(self, df_result, existing_records, primary_key, tablename):
-        if len(df_result) == 0:
-            logger.info(f'{len(existing_records)} registros existentes, no se realizan acciones')
-        elif len(existing_records) == 0:
-            logger.info(f'No existen registros para el pk {primary_key} en {tablename}')
-        else:
-            logger.info(f'{len(existing_records)} registros existentes, insertando novedades ({len(df_result)} registros) en {tablename}')
-
-    def drop_table(self, schema, table):
+    def drop_table(self, schema: str, table: str):
         query = f'DROP TABLE {schema}.{table};'
         self.do(query)
 
-    def create_table_like(self, schema, table, schema_orig, table_orig):
+    def truncate_table(self, schema: str, table: str):
+        query = f'DELETE FROM {schema}.{table} ALL;'
+        self.do(query)
+
+    def table_columns(self, schema: str, table: str) -> List[str]:
+        query = f'SEL TOP 1 * FROM {schema}.{table};'
+        result = self.query(query)
+        return result.columns.tolist()
+
+    def create_table_like(self, schema: str, table: str, schema_orig: str, table_orig: str):
         query = f'CREATE TABLE {schema}.{table} AS {schema_orig}.{table_orig} WITH NO DATA;'
         self.do(query)
 
-    def upsert_by_primary_key(self, schema, table, df, primary_key):
-        df_result, existing_records = upsert_by_primary_key(self.eng, table, df, primary_key, schema=schema)
-        self._log_inserts(df_result, existing_records, primary_key, table)
-        return df_result
+    def insert(self, df: DataFrame, schema: str, table: str, pk: str,
+               use_odbc: bool = True, odbc_limit: int = 10000):
+        if len(df) <= odbc_limit and use_odbc:
+            parts = chunks_df(df, 5000)
+            total = len(parts)
+            for i, chunk in enumerate(parts):
+                logger.info(f'Cargando lote {i+1} de {total}')
+                chunk.to_sql(name=table, con=self.engine, schema=schema, if_exists='append', index=False)
+        else:
+            self.retry_fastload(df, schema, table, pk)
 
-    def upsert_dataframe(self, schema, table, df, primary_key):
-        df_result, existing_records = upsert_by_primary_key(self.eng, table, df, primary_key, schema=schema)
-        self._log_inserts(df_result, existing_records, primary_key, table)
+    def upsert(self, df: DataFrame, schema: str, table: str, pk: str,
+               use_odbc: bool = True, odbc_limit: int = 10000):
+        self.delete_by_primary_key(df, schema, table, pk)
+        self.insert(df, schema, table, pk, use_odbc, odbc_limit)
 
-    def get_inserts_from_table(self, schema, table):
+    def get_inserts_from_table(self, schema: str, table: str):
         tablename = f'{schema}.{table}'
         df = load_table(self.engine, tablename, use_quotes=False)
         return inserts_from_dataframe(df, tablename)
@@ -330,10 +325,60 @@ class TeradataDB:
         while retries > 0:
             try:
                 self.fastload(df, schema=schema, table=table, pk=pk, index=False)
-                break
+                return True
             except tdOperationalError as e:
                 if '2663' in e:
+                    logger.warning(e)
                     sleep(retry_sleep)
                     retries -= 1
                 else:
                     raise e
+        raise DatabaseError('Se superaron todos los reintentos de fastload')
+
+    def diff(self, schema_src: str, table_src: str, schema_dst: str, table_dst: str) -> DataFrame:
+        query = f"SELECT * FROM {schema_src}.{table_src} MINUS SELECT * FROM {schema_dst}.{table_dst};"
+        difference = self.query(query)
+        return difference
+
+    def _get_named_cols(self, schema_stg: str, table_stg: str, schema_dst: str, table_dst: str, prefix: str):
+        try:
+            columns = self.table_columns(schema_dst, table_dst)
+        except pyodbc.ProgrammingError:
+            logger.warning('La tabla destino no existe, creando DDL por inferencia de tipos de datos')
+            columns = self.table_columns(schema_stg, table_stg)
+            self.create_table_like(schema_dst, table_dst, schema_stg, table_stg)
+
+        return [f'{prefix}.{x}' for x in columns]
+
+    def forced_drop_table(self, schema: str, table: str):
+        try:
+            self.drop_table(schema, table)
+        except pyodbc.ProgrammingError:
+            pass
+
+    def staging_insert(self, df: DataFrame, schema_stg: str, table_stg: str, schema_dst: str, table_dst: str, pk: str):
+        self.forced_drop_table(schema_stg, table_stg)
+        self.retry_fastload(df, schema_stg, table_stg, pk)
+
+        named_columns = self._get_named_cols(schema_stg, table_stg, schema_dst, table_dst, 'stg')
+        query = f'INSERT INTO {schema_dst}.{table_dst} SELECT {", ".join(named_columns)} ' + \
+            f'FROM {schema_stg}.{table_stg} stg ' + \
+            f'LEFT JOIN {schema_dst}.{table_dst} prd ON prd.{pk} = stg.{pk} ' + \
+            f'WHERE prd.{pk} IS NULL;'
+
+        self.do(query)
+        self.drop_table(schema_stg, table_stg)
+
+    def staging_upsert(self, df: DataFrame, schema_stg: str, table_stg: str, schema_dst: str, table_dst: str, pk: str):
+        self.forced_drop_table(schema_stg, table_stg)
+        self.retry_fastload(df, schema_stg, table_stg, pk)
+        self.delete_by_primary_key(df, schema_dst, table_dst, pk)
+
+        named_columns = self._get_named_cols(schema_stg, table_stg, schema_dst, table_dst, 'stg')
+        query = f'INSERT INTO {schema_dst}.{table_dst} SELECT {", ".join(named_columns)} ' + \
+            f'FROM {schema_stg}.{table_stg} stg ' + \
+            f'LEFT JOIN {schema_dst}.{table_dst} prd ON prd.{pk} = stg.{pk} ' + \
+            f'WHERE prd.{pk} IS NULL;'
+
+        self.do(query)
+        self.drop_table(schema_stg, table_stg)
