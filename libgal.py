@@ -9,6 +9,9 @@ Created on Fri Mar 25 15:22:35 2022
 """
 
 
+#from email import charset
+
+
 try:
     
     import logging #Libreria para logs
@@ -36,9 +39,15 @@ try:
     from sqlalchemy.ext.declarative import declarative_base
     from sqlalchemy.exc import OperationalError as SQLAlchemyError
 
+    #TeradataML
+    import teradataml
+
+    #Pandas
+    import pandas
+    
     #Machine Learning
     from sklearn.base import BaseEstimator, TransformerMixin
-    import pandas as pd
+    #import pandas as pd
     import numpy as np
     from collections import defaultdict
     from scipy.stats import ks_2samp
@@ -96,7 +105,7 @@ def logger(format_output="JSON", app_name=__name__):
     if format_output.lower()=='json':
         c_format = logging.Formatter("{'time':'%(asctime)s', 'name': '%(name)s','level': '%(levelname)s', 'message': '%(message)s'}", datefmt='%m/%d/%Y %I:%M:%S %p')
     elif format_output.lower()=='csv':
-        c_format= logging.Formatter('%(asctime)s;%(name)s;%(levelname)s;%(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+        c_format= logging.Formatter('%(asctime)s|%(name)s|%(levelname)s|%(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
     else:
         raise Exception("Tipo de formato de Log inválido. Formatos soportados (JSON y CSV).")
         
@@ -149,44 +158,48 @@ def html_parser(html):
     
     return soup
 
-def teradata(host,user,password,logmech="LDAP"):
+
+def teradata(host,username,password,logmech="LDAP", database=None):
     
     # Funcion que permite la conexion hacia el sgdb
     
     """
-    Descripción: Permite la conexion hacia el sgdb de Teradata
-    Parámetro:
+    Descripción: Permite la conexion hacia la Base de Teradata
+    Parámetros:
     - host (String): uri del servidor de base de datos
-    - user (String): Usuario que autentica la conexión a la base de datos
+    - username (String): Usuario que autentica la conexión a la base de datos
     - password (String): Contraseña para la autenticación de la connexión de la base de datos
     - logmech (String): Parámetro Opcional que indica el método de autenticación del usuario. LDAP por defecto
+    - database (String): Parámetro Opcional que indica la base de datos a la cual nos vamos a conectar
     """
-    
-    td_connection = teradatasql.connect(host=host, user=user, password=password,logmech=logmech.upper())
+    if database:
+        td_connection = teradatasql.connect(host=host, user=username, password=password,logmech=logmech.upper(), database=database)
+    else:
+        td_connection = teradatasql.connect(host=host, user=username, password=password,logmech=logmech.upper())
 
     return td_connection
 
 class sqlalchemy:
     
     """
-    Descripción: Permite la conexion hacia el sgdb de 
-    Parámetro:
+    Descripción: Permite la conexion hacia la Base de Datos
+    Parámetros:
     - driver (String): Tipo de conexión o base de datos a utilizar
     - host (String): uri del servidor de base de datos
-    - user (String): Usuario que autentica la conexión a la base de datos
+    - username (String): Usuario que autentica la conexión a la base de datos
     - password (String): Contraseña para la autenticación de la connexión de la base de datos
     - logmech (String): Parámetro Opcional que indica el método de autenticación del usuario. LDAP por defecto
     """
     
-    def __init__(self, driver, host, user, password, logmech="LDAP", pool_recycle=1800, pool_size=20):
+    def __init__(self, driver, host, username, password, logmech="LDAP", timeout_seconds=None, pool_recycle=1800, pool_size=20):
     
         if driver.lower()=="teradata":
             if timeout_seconds:
-                self.engine = create_engine(f"teradatasql://{user}:{password}@{host}/?logmech={logmech.upper()}", pool_recycle=pool_recycle, pool_size=pool_size, connect_args={'connect_timeout': timeout_seconds})
+                self.engine = create_engine(f"teradatasql://{username}:{password}@{host}/?logmech={logmech.upper()}", pool_recycle=pool_recycle, pool_size=pool_size, connect_args={'connect_timeout': timeout_seconds})
             else:
-                self.engine = create_engine(f"teradatasql://{user}:{password}@{host}/?logmech={logmech.upper()}", pool_recycle=pool_recycle, pool_size=pool_size)
+                self.engine = create_engine(f"teradatasql://{username}:{password}@{host}/?logmech={logmech.upper()}", pool_recycle=pool_recycle, pool_size=pool_size)
         elif driver.lower()=="mysql":
-            self.engine = create_engine(f"mysql+mysqlconnector://{user}:{password}@{host}/", pool_recycle=pool_recycle, pool_size=pool_size)
+            self.engine = create_engine(f"mysql+mysqlconnector://{username}:{password}@{host}/", pool_recycle=pool_recycle, pool_size=pool_size)
             
         
     def Session(self):
@@ -197,14 +210,41 @@ class sqlalchemy:
         return declarative_base()
 
     def query(self, query):
+        """
+        Descripción: Permite ejecutar una instrucción SQL según el motor de Base de Datos.
+        Parámetro:
+        - query (String): Instrucción SQL a ejecutar
+        """
         with self.engine.connect() as conn:
             return conn.execute(text(query))
+
+    def InsertDataframe(self, pandas_dataframe, database, table ):
+
+        """
+        Descripción: Permite ejecutar una instrucción SQL según el motor de Base de Datos.
+        Parámetro:
+        - pandas_dataframe: Dataframe de Pandas que contiene la info a insertar
+        - database (String): Base de datos que contiene la tabla a poblar.
+        - table (String): Tabla donde se insertaran los datos del Dataframe
+        """
+
+        with self.engine.connect() as conn:
+
+            pandas_dataframe = pandas_dataframe.astype(str)
+
+            try:
+
+                pandas_dataframe.to_sql(table, schema=database, con=conn, if_exists='append', index=False)
+
+            except SQLAlchemyError as e:
+                print(e)
+
 
 ####FUNCIONES DE MACHINE LEARNING
 
 def evaluate_ks_and_roc_auc(y_real, y_proba):
     # Unite both visions to be able to filter
-    df = pd.DataFrame()
+    df = pandas.DataFrame()
     df['real'] = y_real
     df['proba'] = y_proba
     class0 = df[df['real'] == 0]
@@ -245,7 +285,7 @@ class NumNormTransformer(BaseEstimator, TransformerMixin):
         self.X_sca = (self.X_sca.max()-self.X_sca)/(self.X_sca.max()-self.X_sca.min())        
         X.drop(columns = self.originals, inplace = True)
         
-        X = pd.concat([X, self.X_norm], axis = 1)
+        X = pandas.concat([X, self.X_norm], axis = 1)
         return X
 
 class NumLogTransformer(BaseEstimator, TransformerMixin):
@@ -269,7 +309,7 @@ class NumLogTransformer(BaseEstimator, TransformerMixin):
         self.X_log = X[self.originals]
         self.X_log.columns = [str(x)+"_log" for x in self.X_log]
         self.X_log = np.log(self.X_log+1)
-        X = pd.concat([X, self.X_log], axis = 1)
+        X = pandas.concat([X, self.X_log], axis = 1)
         if not self.keep_original:
             X.drop(columns = self.originals, inplace = True)
         return X

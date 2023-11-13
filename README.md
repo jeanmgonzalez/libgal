@@ -429,6 +429,27 @@ con=libgal.sqlalchemy(host='host', user='usuario', password='password', driver='
 
 otra_query=con.query("select * from tabla where campo='valor'")
 ```
+<br>
+
+### InsertDataframe
+
+Esta función permite insertar los datos de un Dataframe de Pandas en una tabla siempre y cuando tenga los mismos nombres de campo que el Dataframe.
+
+```python
+import libgal
+import pandas
+
+d = {'col1': [1, 2], 'col2': [3, 4]}
+
+dataframe = pandas.DataFrame(data=d)
+
+con=libgal.sqlalchemy(host='host', user='usuario', password='password', driver='teradata')
+
+conn.InsertDataframe(pandas_dataframe=dataframe,database='esquema', table='tabla')
+```
+
+<br>
+
 
 ### SQLAlchemyError
 
