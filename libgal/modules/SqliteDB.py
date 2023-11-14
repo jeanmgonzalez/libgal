@@ -18,21 +18,20 @@ class SqliteDB(DatabaseAPI):
         self.filepath = dbfile
         self.conn, self.eng = self.connect()
         self.should_drop_tables = drop_tables
-        self.create_tables()
 
     def connect(self):
         eng = sqlalchemy.create_engine(f'sqlite:///{self.filepath}')
         conn = eng.raw_connection()
         return conn, eng
 
-    def do(self, query):
+    def do(self, query: str):
         c = self.conn.cursor()
-        logger.info(f'Ejecutando query: {query}')
+        logger.debug(f'Ejecutando query: {query}')
         c.execute(query)
         c.close()
         self.conn.commit()
 
-    def read_table(self, table):
+    def read_table(self, table: str):
         return load_table(self.engine, table)
 
     def insert(self, df: DataFrame, schema: Optional[str], table: str, pk: str,
@@ -68,10 +67,10 @@ class SqliteDB(DatabaseAPI):
                        table_dst: str, pk: str):
         raise FunctionNotImplementedException('staging_upsert no está implementado para SQLite')
 
-    def load_sql(self, path):
+    def load_sql(self, path: str):
         return load_sql(path)
 
-    def query(self, query):
+    def query(self, query: str):
         return pd.read_sql(sql=query, con=self.engine, index_col=None, coerce_float=True,
                            parse_dates=None, columns=None, chunksize=None)
 
@@ -113,42 +112,38 @@ class SqliteDB(DatabaseAPI):
         self.do(query)
         self.truncate_table(schema, table)
 
-    def drop_tables(self, tables):
+    def drop_tables(self, tables: List[str]):
         for table in tables:
             query = f'DROP TABLE IF EXISTS "{table}";'
             self.do(query)
 
-    def drop_views(self, views):
+    def drop_views(self, views: List[str]):
         for view in views:
             query = f'DROP VIEW IF EXISTS "{view}";'
             self.do(query)
 
-    @abstractmethod
-    def create_tables(self):
-        pass
-
-    def strip_names(self, df, name):
+    def strip_names(self, df: DataFrame, name: str):
         col_names = df.columns
         new_names = [re.sub(name, '', col) for col in col_names]
         dict_names = dict(zip(col_names, new_names))
         renamed = df.rename(columns=dict_names)
         return renamed, col_names
 
-    def select_path(self, df, pattern):
+    def select_path(self, df: DataFrame, pattern):
         to_strip = df.iloc[:, df.columns.str.contains(f'^{pattern}\..*')]
         return self.strip_names(to_strip, f'^{pattern}\.')
 
-    def select_cols(self, df, pattern):
+    def select_cols(self, df: DataFrame, pattern):
         to_strip = df.iloc[:, df.columns.str.contains(f'^{pattern}.*')]
         return self.strip_names(to_strip, f'^{pattern}')
 
-    def key_exists(self, table, field_id, key):
+    def key_exists(self, table: str, field_id: str, key):
         query = f'SELECT * FROM {table} WHERE {field_id}="{key}";'
         result_df = self.query(query)
         return not result_df.empty
 
     @staticmethod
-    def drop_lists(df):
+    def drop_lists(df: DataFrame):
         return drop_lists(df)
 
     @property

@@ -1,6 +1,6 @@
 import unittest
+from getpass import getpass
 from time import time
-import pyodbc
 from pandas import DataFrame
 from test_dataframe import generate_dataframe
 from libgal.modules.TeradataDB import TeradataDB
@@ -12,18 +12,17 @@ logger = Logger().get_logger()
 def ask_user_pwd():
     host = input(f'Ingrese host a conectarse: ')
     logmech = 'LDAP' if input(f'Debería usar LDAP para autenticar (s/n)?: ').strip().lower() == 's' else None
-    db = input(f'Ingrese schema default de sesión (ej, p_staging): ')
     usr = input(f'Ingrese usuario de conexión: ')
-    passw = input(f'Ingrese la contraseña para el usuario {usr} (aviso, no se oculta el input): ')
-    return host, db, usr, passw, logmech
+    passw = getpass(f'Ingrese la contraseña para el usuario {usr}: ')
+    return host, usr, passw, logmech
 
 
-host, db, usr, passw, logmech = ask_user_pwd()
+host, usr, passw, logmech = ask_user_pwd()
 logger.info('Generando dataframe de prueba')
 test_df: DataFrame = generate_dataframe(num_rows=500000)
 logger.info('Realizando conexiones a la base de datos')
 t_st = time()
-teradata = TeradataDB(host=host, user=usr, passw=passw, db=db, logmech=logmech)
+teradata = TeradataDB(host=host, user=usr, passw=passw, logmech=logmech)
 t_conn = time() - t_st
 logger.info('Conexión exitosa')
 logger.info(f'Tiempo de conexión: {round(t_conn, 2)} s')
@@ -49,12 +48,15 @@ class TeradataTests(unittest.TestCase):
         dbcname = 'STG_TERADATAML_ODBC_TEST_V2'
         dw_table = 'STG_TERADATAML_STAGINGLOAD_TEST_V2'
         self.staging_load(schema, dbcname, dl_schema, dw_table, 'Log_Id')
+        self.fastload(schema, flname)
+        self.verify_tables(schema, flname, dl_schema, dw_table)
         self.odbc(schema, dbcname, flname)
         self.verify_tables(schema, dbcname, dl_schema, dw_table)
-        self.fastload(schema, flname)
         self.post_checks(schema, flname, dbcname)
-        # self.cleanup(schema, [dbcname, flname])
-        # self.cleanup(dl_schema, [dw_table])
+        yn = input('Desea borrar las tablas de prueba generadas (s/n)? ')
+        if yn.lower() == 's':
+            self.cleanup(schema, [dbcname, flname])
+            self.cleanup(dl_schema, [dw_table])
 
     def staging_load(self, schema, dbcname, dl_schema, dw_table, pk):
         t_start = time()

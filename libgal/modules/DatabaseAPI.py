@@ -10,6 +10,11 @@ class FunctionNotImplementedException(Exception):
     pass
 
 
+class DatabaseError(Exception):
+    """No se puede realizar la operación en la base de datos"""
+    pass
+
+
 class DatabaseAPI(ABC):
 
     @abstractmethod

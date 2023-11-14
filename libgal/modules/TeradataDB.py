@@ -4,17 +4,19 @@ from typing import Optional, List
 
 import pyodbc
 import pandas as pd
+import teradatasql
 from pandas import DataFrame
-from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
+from sqlalchemy.exc import OperationalError
 
-from libgal.modules.DatabaseAPI import DatabaseAPI
+from libgal.modules.DatabaseAPI import DatabaseAPI, DatabaseError
 from libgal.modules.Logger import Logger
 from libgal.modules.ODBCTools import load_table, inserts_from_dataframe
 from time import sleep
 from teradataml.context.context import create_context
 from teradataml.dataframe.fastload import fastload
 from teradatasql import OperationalError as tdOperationalError
-from libgal.modules.Utils import chunks_df, chunks
+from libgal.modules.Utils import chunks_df
 
 logger = Logger(dirname=None).get_logger()
 
@@ -128,57 +130,38 @@ class Scripting:
         return str_arr
 
 
-class DriverNotFoundException(Exception):
-    "No se han encontrado drivers de ODBC disponibles"
-    pass
-
-
-class DatabaseError(Exception):
-    "No se puede realizar la operación en la base de datos"
-    pass
-
-
 class TeradataDB(DatabaseAPI):
 
-    def __init__(self,
-                 host: str, user: str, passw: str, db: Optional[str] = None,
-                 logmech: Optional[str] = None, charset: str = 'iso-8859-15',
-                 url_params: Optional[str] = None):
-        self.charset = charset
-        self.tml_connected = False
-        self.context = None
+    def __init__(self, host: str, user: str, passw: str,
+                 logmech: Optional[str] = None, schema: Optional[str] = 'DBC'):
 
-        success, drivers = self.check_drivers()
-        logger.info(f'Realizando conexión a la base de datos {host} con usuario {user}')
-        td_drivers = [d for d in drivers if 'teradata' in d.lower()]
-        if success and len(td_drivers) > 0:
-            driver_name = td_drivers[0]
-            logger.info(f'Utilizando driver: {driver_name}')
-            if 'ldap' not in logmech.lower():
-                self.odbclink = 'DRIVER={DRIVERNAME};DBCNAME={hostname};UID={uid};PWD={pwd}'.format(
-                    DRIVERNAME=driver_name, hostname=host,
-                    uid=user, pwd=passw)
-            else:
-                self.odbclink = 'AUTHENTICATION=LDAP;DRIVER={DRIVERNAME};DBCNAME={hostname};UID={uid};PWD={pwd}'.format(
-                    DRIVERNAME=driver_name, hostname=host,
-                    uid=user, pwd=passw)
+        self.context: Optional[Engine] = None
+        self.eng: Optional[Engine] = None
+        self.conn = None
+        self.schema = schema
+        self.logmech = logmech
+        self._conn_params = {
+            'host': host,
+            'user': user,
+            'pass': passw,
+        }
+        self.connect()
 
-            self.slalink = f'teradata:///?username={user}&password={passw}&host={host}?charset={self.charset}'
-            self.conn, self.eng = self.connect()
-            if db is not None:
-                self.tml_connect(host, user, passw, db, logmech)
+    def connect(self):
+        user, passw, host, schema = self._conn_params['user'], self._conn_params['pass'], \
+                                    self._conn_params['host'], self.schema
 
-    @staticmethod
-    def check_drivers():
-        drivers = pyodbc.drivers()
-        if len(drivers) > 0:
-            logger.info(f'Drivers ODBC detectados: {drivers}')
-            return True, drivers
+        if self.schema is not None:
+            logger.info('Conectando TeradataML')
+            self.tml_connect(host, user, passw, schema, self.logmech)
+            self.conn = self.context.raw_connection()
+            self.eng: Engine = self.context
         else:
-            logger.error(f'No se han encontrado drivers ODBC instalados')
-            return False, []
+            raise DatabaseError(
+                'Fastload solo se puede usar si se inicializa Teradata especificando un schema'
+            )
 
-    def use_db(self, db):
+    def use_db(self, db: str):
         self.do(f'DATABASE {db};')
 
     def do(self, query: str):
@@ -205,36 +188,14 @@ class TeradataDB(DatabaseAPI):
                     raise DatabaseError
 
         else:
-            logger.info(f'Ejecutando query: {query}')
+            logger.debug(f'Ejecutando query: {query}')
             c.execute(query)
 
-        c.commit()
         c.close()
         self.conn.commit()
 
-    def connect_odbc(self):
-        self.conn = pyodbc.connect(self.odbclink, autocommit=True)
-        self.conn.setdecoding(pyodbc.SQL_CHAR, encoding=self.charset)
-        self.conn.setdecoding(pyodbc.SQL_WCHAR, encoding=self.charset)
-        self.conn.setdecoding(pyodbc.SQL_WMETADATA, encoding='utf-16le')
-        self.conn.setencoding(encoding=self.charset)
-        return self.conn
-
-    def engine_connect(self):
-        self.eng = create_engine(
-            self.slalink,
-            creator=self.connect_odbc,
-            echo=False
-        )
-        return self.eng
-
-    def connect(self):
-        conn = self.connect_odbc()
-        eng = self.engine_connect()
-        return conn, eng
-
     def query(self, query: str, mode: str = 'normal') -> DataFrame:
-        logger.info(f'Ejecutando query: {query}')
+        logger.debug(f'Ejecutando query: {query}')
         if mode == 'normal':
             return pd.read_sql(query, self.engine)
         else:
@@ -243,7 +204,7 @@ class TeradataDB(DatabaseAPI):
     def current_date(self) -> datetime.date:
         query = "select current_date;"
         result_df = self.query(query)
-        return result_df['Current Date'][0]
+        return result_df['Date'][0]
 
     def show_tables(self, db: str, prefix: str) -> DataFrame:
         query = f"""SELECT  DatabaseName,
@@ -287,8 +248,8 @@ class TeradataDB(DatabaseAPI):
             self.retry_fastload(df, schema, table, pk)
 
     def upsert(self, df: DataFrame, schema: str, table: str, pk: str,
-               use_odbc: bool = True, odbc_limit: int = 10000):
-        self.delete_by_primary_key(df, schema, table, pk)
+               use_odbc: bool = True, odbc_limit: int = 10000, parser_limit: int = 10000):
+        self.delete_by_primary_key(df, schema, table, pk, parser_limit)
         self.insert(df, schema, table, pk, use_odbc, odbc_limit)
 
     def get_inserts_from_table(self, schema: str, table: str):
@@ -311,19 +272,16 @@ class TeradataDB(DatabaseAPI):
             context = create_context(host=host, user=user, password=passw, logmech=logmech, database=db)
 
         self.context = context
-        self.tml_connected = True
         return context
 
     def fastload(self, df, schema, table, pk, index=False):
-        if not self.tml_connected:
-            raise DatabaseError(
-                'Fastload solo se puede usar si se inicializa Teradata especificando un schema en el argumento db'
-            )
         fastload(df, schema_name=schema, table_name=table, primary_index=pk, index=index)
 
     def retry_fastload(self, df, schema, table, pk, retries=30, retry_sleep=20):
+        size = len(df)
         while retries > 0:
             try:
+                logger.info(f'Ejecutando fastload en {schema}.{table} ({size} filas)')
                 self.fastload(df, schema=schema, table=table, pk=pk, index=False)
                 return True
             except tdOperationalError as e:
@@ -343,7 +301,7 @@ class TeradataDB(DatabaseAPI):
     def _get_named_cols(self, schema_stg: str, table_stg: str, schema_dst: str, table_dst: str, prefix: str):
         try:
             columns = self.table_columns(schema_dst, table_dst)
-        except pyodbc.ProgrammingError:
+        except (pyodbc.ProgrammingError, teradatasql.OperationalError, OperationalError):
             logger.warning('La tabla destino no existe, creando DDL por inferencia de tipos de datos')
             columns = self.table_columns(schema_stg, table_stg)
             self.create_table_like(schema_dst, table_dst, schema_stg, table_stg)
@@ -353,7 +311,7 @@ class TeradataDB(DatabaseAPI):
     def forced_drop_table(self, schema: str, table: str):
         try:
             self.drop_table(schema, table)
-        except pyodbc.ProgrammingError:
+        except (pyodbc.ProgrammingError, teradatasql.OperationalError):
             pass
 
     def staging_insert(self, df: DataFrame, schema_stg: str, table_stg: str, schema_dst: str, table_dst: str, pk: str):
@@ -369,10 +327,11 @@ class TeradataDB(DatabaseAPI):
         self.do(query)
         self.drop_table(schema_stg, table_stg)
 
-    def staging_upsert(self, df: DataFrame, schema_stg: str, table_stg: str, schema_dst: str, table_dst: str, pk: str):
+    def staging_upsert(self, df: DataFrame, schema_stg: str, table_stg: str, schema_dst: str,
+                       table_dst: str, pk: str, parser_limit: int = 10000):
         self.forced_drop_table(schema_stg, table_stg)
         self.retry_fastload(df, schema_stg, table_stg, pk)
-        self.delete_by_primary_key(df, schema_dst, table_dst, pk)
+        self.delete_by_primary_key(df, schema_dst, table_dst, pk, parser_limit)
 
         named_columns = self._get_named_cols(schema_stg, table_stg, schema_dst, table_dst, 'stg')
         query = f'INSERT INTO {schema_dst}.{table_dst} SELECT {", ".join(named_columns)} ' + \
