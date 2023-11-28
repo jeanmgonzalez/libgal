@@ -3,7 +3,7 @@ from getpass import getpass
 from time import time
 from pandas import DataFrame
 from test_dataframe import generate_dataframe
-from libgal.modules.TeradataDB import TeradataDB
+from libgal.modules.Teradata import Teradata
 from libgal.modules.Logger import Logger
 
 logger = Logger().get_logger()
@@ -22,7 +22,7 @@ logger.info('Generando dataframe de prueba')
 test_df: DataFrame = generate_dataframe(num_rows=500000)
 logger.info('Realizando conexiones a la base de datos')
 t_st = time()
-teradata = TeradataDB(host=host, user=usr, passw=passw, logmech=logmech)
+teradata = Teradata(host=host, user=usr, passw=passw, logmech=logmech)
 t_conn = time() - t_st
 logger.info('Conexión exitosa')
 logger.info(f'Tiempo de conexión: {round(t_conn, 2)} s')

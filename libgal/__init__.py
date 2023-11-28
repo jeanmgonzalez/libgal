@@ -43,6 +43,8 @@ try:
     from scipy.stats import ks_2samp
     from sklearn.metrics import roc_curve, roc_auc_score
     from libgal.modules.Logger import Logger
+    from selenium.webdriver.common.keys import Keys
+    from selenium.webdriver.common.action_chains import ActionChains
 
 
 except ImportError as imp_err:
@@ -97,19 +99,43 @@ def shutdown_logger():
     pass
 
 
-def firefox(webdriver_path, browser_path, url, hidden=False):
+def firefox(webdriver_path, browser_path, url, hidden=False, tipo_archivo=None, ruta_descarga=None):
+
     """
-    Descripción: Crea un cliente web para pruebas y automatizaciones
+    Descripción: Crea un cliente web para pruebas, scrapings y automatizaciones
     Parámetro:
-    - format_output (String): Tipo de Salida del Log (JSON, CSV)
-    - app_name (String): Nombre de la aplicación para el log
+    - webdriver_path (String): Path completo de la ruta y el archivo ejecutable del driver para el cliente web
+    - browser_path (String): Path completo de la ruta y el archivo ejecutable del browser web
+    - url (String): URL del sitio web a explorar.
+    - hidden (Boolean): Indica si se oculta o no el cliente web. False por defecto.
     """
 
     options = webdriver.FirefoxOptions()
     options.binary_location = browser_path
-    options.headless = hidden
 
-    driver_service = Service(webdriver_path)
+    if hidden:
+        options.add_argument("--headless")
+
+    #profile = webdriver.FirefoxProfile()
+    options.set_preference('browser.download.folderList', 2)
+    options.set_preference('browser.download.manager.showWhenStarting', False)
+
+    if ruta_descarga:
+        options.set_preference('browser.download.dir', str(ruta_descarga))
+        #options.set_preference('browser.helperApps.neverAsk.saveToDisk', 'application/octet-stream')
+
+    if tipo_archivo.lower()=='pdf':
+        options.set_preference('browser.helperApps.neverAsk.saveToDisk', 'application/pdf')
+        options.set_preference('pdfjs.disabled',True)
+    elif tipo_archivo.lower()=='txt':
+        options.set_preference('browser.helperApps.neverAsk.saveToDisk', 'text/plain')
+    elif tipo_archivo.lower()=='png':
+        options.set_preference('browser.helperApps.neverAsk.saveToDisk', 'image/png')
+    elif tipo_archivo.lower()=='jpg':
+        options.set_preference('browser.helperApps.neverAsk.saveToDisk', 'image/jpeg')
+
+
+    driver_service=Service(webdriver_path)
 
     web_browser = webdriver.Firefox(service=driver_service, options=options)
     web_browser.get(url)

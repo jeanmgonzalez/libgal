@@ -26,6 +26,9 @@ class DatabaseAPI(ABC):
         ...
 
     def execute(self, query: str):
+        """
+        Alias de do
+        """
         self.do(query)
 
     @abstractmethod
@@ -72,6 +75,9 @@ class DatabaseAPI(ABC):
         ...
 
     def insert_overwrite(self, df: DataFrame, schema: Optional[str], table: str, pk: str):
+        """
+        Alias de upsert
+        """
         self.upsert(df, schema, table, pk)
 
     @abstractmethod
