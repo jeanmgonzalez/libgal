@@ -47,11 +47,12 @@ Inicializa una conexión a Teradata
 """
 td = Teradata(host='nombre_host', user='usuario', passw='contraseña')
 ```
+
 Si se va a usar LDAP para la autenticación, se debe especificar el parámetro logmech='LDAP'.  
 En caso contrario, se puede omitir el parámetro logmech y por defecto será 'TD2'.  
 Opcionalmente se puede especificar el schema por defecto con el parámetro schema. 
----
 
+---
 ## Funciones
 ### Cambiar la base de datos actual
 ```python
