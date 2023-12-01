@@ -6,25 +6,31 @@
 Libgal define una interfaz para la carga de DataFrames a Teradata
 
 **Índice de características:**
-- Poder conectarse al motor de base de datos y mantener la conexión abierta.
-- Ejecutar sentencias que no retornan datos (ej: create table, drop table, insert, update, delete, etc).
-- Ejecutar queries que retornan datos (ej: select) y devolver el resultado en un dataframe.
-- Truncar una tabla.
-- Borrar una tabla.
-- Borrar una tabla si existe.
-- Obtener la lista de columnas de una tabla.
-- Obtener la lista de tablas de una base de datos.
-- Cargar un dataframe a una tabla.
-- Actualizar forzado (upsert/insert overwrite) de un dataframe en una tabla.
-- Crear una tabla que es copia de la estructura de otra.
-- Obtener la diferencia entre dos tablas.
-- Realizar una carga incremental de un dataframe a una tabla.
+- [Conectarse al motor de base de datos y mantener la conexión abierta.](#instanciar-el-objeto-y-establecer-la-conexión)
+- [Ejecutar sentencias que no retornan datos (ej: create table, drop table, insert, update, delete, etc).](#ejecutar-una-sentencia-sin-retorno-de-datos)
+- [Ejecutar queries que retornan datos (ej: select) y devolver el resultado en un dataframe.](#ejecutar-una-query-que-devuelve-un-dataframe)
+- [Truncar una tabla.](#truncar-una-tabla)
+- [Borrar una tabla.](#eliminar--dropear-una-tabla)
+- [Borrar una tabla si existe.](#borrar-una-tabla-si-existe)
+- [Obtener la lista de nombres de columnas de una tabla.](#obtener-los-nombres-de-las-columnas-de-una-tabla)
+- [Obtener la lista de tablas de una base de datos que empiezan con un prefijo.](#obtener-una-lista-de-tablas-de-una-base-de-datos-que-coinciden-con-prefijo--nombre_tabla)
+- [Cargar un dataframe a una tabla.](#insertar-un-dataframe-en-una-tabla)
+- [Actualizar forzado (upsert/insert overwrite) de un dataframe en una tabla.](#actualizar-un-dataframe-en-una-tabla-forzado-insert-overwriteupsert)
+- [Crear una tabla que es copia de la estructura de otra.](#crear-una-tabla-que-es-copia-de-la-estructura-de-otra)
+- [Obtener la diferencia entre dos tablas.](#obtener-la-diferencia-entre-dos-tablas)
+- [Realizar una carga incremental de un dataframe a una tabla.](#carga-incremental-de-un-dataframe-a-una-tabla)
+- [Realizar un upsert incremental de un dataframe a una tabla.](#upsert-incremental-de-un-dataframe-a-una-tabla)
+- [Realizar un fastload de un dataframe a una tabla.](#fastload-de-un-dataframe-a-una-tabla)
+- [Realizar un fastload con reintentos.](#fastload-con-reintentos)
+- [Obtener la fecha desde el servidor (útil para test de conexión).](#obtener-la-fecha-desde-el-servidor)
+- [Cambiar la base de datos actual.](#cambiar-la-base-de-datos-actual)
+
 
 ## Importar la librería
 ```python
 from libgal.modules.Teradata import Teradata
 ```
-
+---
 ## Instanciar el objeto y establecer la conexión
 ```python
 """
@@ -38,9 +44,9 @@ Inicializa una conexión a Teradata
 td = Teradata(host='nombre_host', user='usuario', passw='contraseña')
 ```
 Si se va a usar LDAP para la autenticación, se debe especificar el parámetro logmech='LDAP'.  
-En caso contrario, se puede omitir el parámetro logmech y por defecto será 'TD2'. 
-
+En caso contrario, se puede omitir el parámetro logmech y por defecto será 'TD2'.  
 Opcionalmente se puede especificar el schema por defecto con el parámetro schema. 
+---
 
 ## Funciones
 ### Cambiar la base de datos actual
@@ -56,7 +62,7 @@ Cambia la base de datos por defecto para las operaciones que se ejecuten a conti
 ```python
 td.use_db('nombre_base_datos')
 ```
-
+---
 ### Ejecutar una sentencia sin retorno de datos
 ```python
     def do(self, query: str):
@@ -69,7 +75,7 @@ td.use_db('nombre_base_datos')
 ```python
 td.do('CREATE TABLE tabla (campo1 INT, campo2 VARCHAR(10))')
 ```
-
+---
 ### Ejecutar una query que devuelve un dataframe
 ```python
     def query(self, query: str, mode: str = 'normal') -> DataFrame:
@@ -88,7 +94,8 @@ Si se especifica el parámetro mode='legacy', utiliza el driver ODBC en vez de e
 Esto puede ser útil para ejecutar queries que no son soportadas por el engine de SQLAlchemy.  
 Por lo general no es necesario especificar el modo.  
 
-### Obtener la fecha desde el servidor (útil para test de conexión)
+---
+### Obtener la fecha desde el servidor
 ```python
     def current_date(self) -> datetime.date:
         """
@@ -99,6 +106,8 @@ Por lo general no es necesario especificar el modo.
 ```python
 current_date = td.current_date()
 ```
+
+---
 ### Obtener una lista de tablas de una base de datos que coinciden con prefijo + nombre_tabla
 ```python
     def show_tables(self, db: str, prefix: str) -> DataFrame:
@@ -113,7 +122,7 @@ current_date = td.current_date()
 ```python
 tablas_df = td.show_tables(db='nombre_base_datos', prefix='prefijo_tabla')
 ```
-
+---
 ### Eliminar / dropear una tabla
 ```python
     def drop_table(self, schema: str, table: str):
@@ -130,6 +139,7 @@ td.drop_table(schema='nombre_schema', table='nombre_tabla')
 Ejecuta DROP TABLE nombre_schema.nombre_tabla;  
 Si la tabla no existe, se produce una excepción teradatasql.OperationalError.  
 
+---
 ### Borrar una tabla si existe
 ```python
     def drop_table_if_exists(self, schema: str, table: str):
@@ -145,6 +155,7 @@ td.drop_table_if_exists(schema='nombre_schema', table='nombre_tabla')
 ```
 En el caso de que la tabla no exista, no se produce ningún error.
 
+---
 ### Truncar una tabla
 ```python
     def truncate_table(self, schema: str, table: str):
@@ -160,6 +171,7 @@ td.truncate_table(schema='nombre_schema', table='nombre_tabla')
 ```
 Ejecuta DELETE FROM nombre_schema.nombre_tabla ALL;
 
+---
 ### Obtener los nombres de las columnas de una tabla
 ```python
     def table_columns(self, schema: str, table: str) -> List[str]:
@@ -174,6 +186,7 @@ Ejecuta DELETE FROM nombre_schema.nombre_tabla ALL;
 columnas = td.table_columns(schema='nombre_schema', table='nombre_tabla')
 ```
 
+---
 ### Crear una tabla que es copia de la estructura de otra
 ```python
     def create_table_like(self, schema: str, table: str, schema_orig: str, table_orig: str):
@@ -191,6 +204,7 @@ td.create_table_like(schema='nombre_schema', table='nombre_tabla', schema_orig='
 ```
 Crea la tabla nombre_schema.nombre_tabla con la misma estructura que nombre_schema_orig.nombre_tabla_orig. 
 
+---
 ### Insertar un dataframe en una tabla
 ```python
     def insert(self, df: DataFrame, schema: str, table: str, pk: str,
@@ -214,6 +228,7 @@ Si los registros existen, se produce una excepción teradatasql.IntegrityError.
 Al insertar menos de 10000 registros, se utiliza el driver ODBC, caso contrario se utiliza fastload.  
 El límite de 10000 registros se puede modificar con el parámetro odbc_limit, y si se especifica use_odbc=False, se fuerza el uso de fastload. 
 
+---
 ### Actualizar un dataframe en una tabla forzado (insert overwrite/upsert)
 ```python
     def upsert(self, df: DataFrame, schema: str, table: str, pk: str,
@@ -239,6 +254,7 @@ La actualización se realiza borrando los registros existentes y volviendo a ins
 El parámetro parser_limit se utiliza para dividir la cantidad de pks en grupos de tamaño parser_limit, y así evitar errores de parser al ejecutar el delete.  
 Por lo general no es necesario modificar el parámetro parser_limit, pero si existen excepciones de parser, se puede probar con un valor mas bajo.
 
+---
 ### Fastload de un dataframe a una tabla
 ```python
     def fastload(self, df: DataFrame, schema: str, table: str, pk: str, index=False):
@@ -258,7 +274,7 @@ td.fastload(df=df, schema='nombre_schema', table='nombre_tabla', pk='nombre_pk')
 Inserta el dataframe df en la tabla nombre_schema.nombre_tabla utilizando fastload.  
 Si los registros existen, se produce una excepción teradatasql.IntegrityError.
 
-
+---
 ### Fastload con reintentos
 ```python
     def retry_fastload(self, df: DataFrame, schema: str, table: str, pk: str, retries: int = 30, retry_sleep: int = 20):
@@ -281,6 +297,7 @@ Por defecto se realizan 30 reintentos con un tiempo de espera de 20 segundos ent
 td.retry_fastload(df=df, schema='nombre_schema', table='nombre_tabla', pk='nombre_pk')
 ```
 
+---
 ### Obtener la diferencia entre dos tablas
 ```python
     def diff(self, schema_src: str, table_src: str, schema_dst: str, table_dst: str) -> DataFrame:
@@ -300,6 +317,7 @@ Ejecuta SELECT * FROM nombre_schema_src.nombre_tabla_src MINUS SELECT * FROM nom
 Esta función se utiliza para la carga incremental de tablas que no tienen un primary key.  
 Es recomendable de todas formas, que las tablas que vayan a realizar cargas incrementales tengan un primary key.  
 
+---
 ### Carga incremental de un dataframe a una tabla
 ```python
     def staging_insert(self, df: DataFrame, schema_stg: str, table_stg: str, schema_dst: str, table_dst: str, pk: str):
@@ -314,11 +332,13 @@ Es recomendable de todas formas, que las tablas que vayan a realizar cargas incr
         """
 ```
 Para la carga incremental, primero se sube el lote a cargar a una tabla staging, y luego se realiza un insert desde ese staging a la tabla destino de todos los registros que no existen en la tabla destino.
+
 **Ejemplo:**
 ```python
 td.staging_insert(df=df, schema_stg='nombre_schema_stg', table_stg='nombre_tabla_stg', schema_dst='nombre_schema_dst', table_dst='nombre_tabla_dst', pk='nombre_pk')
 ```
 
+---
 ### Upsert incremental de un dataframe a una tabla
 ```python
     def staging_upsert(self, df: DataFrame, schema_stg: str, table_stg: str, schema_dst: str,
@@ -335,11 +355,10 @@ td.staging_insert(df=df, schema_stg='nombre_schema_stg', table_stg='nombre_tabla
         """
 ```
 Hace lo mismo que la función staging_insert, pero si los registros existen, los actualiza.
+
 **Ejemplo:**
 ```python
 td.staging_upsert(df=df, schema_stg='nombre_schema_stg', table_stg='nombre_tabla_stg', schema_dst='nombre_schema_dst', table_dst='nombre_tabla_dst', pk='nombre_pk')
 ```
 La actualización se realiza borrando los registros existentes y volviendo a insertarlos al igual que en la función upsert.  
 El parámetro parser_limit se utiliza de la misma forma que en la función upsert.
-
-
