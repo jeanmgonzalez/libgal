@@ -47,6 +47,9 @@
         <li><a href="#selenium-web-browser-firefox">Selenium Web Browser Firefox</a></li>
         <li><a href="#teradata">Teradata</a>
           <ul>
+            <li><a href="docs/Teradata.md">Fastload</a></li>
+          </ul>
+          <ul>
             <li><a href="#teradataerror">TeradataError</a></li>
           </ul>
         </li>
@@ -59,6 +62,7 @@
             <li><a href="#sqlalchemyerror">SQLAlchemyError</a></li>
           </ul>
         </li>
+        <li><a href="docs/FSUtils.md">Utilidades del filesystem</a></li>
       </ul>
     </li>
     <li><a href="#contacto">Contacto</a></li>

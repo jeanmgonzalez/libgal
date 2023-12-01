@@ -425,7 +425,7 @@ class Teradata(DatabaseAPI):
 
         return [f'{prefix}.{x}' for x in columns]
 
-    def forced_drop_table(self, schema: str, table: str):
+    def drop_table_if_exists(self, schema: str, table: str):
         """
         Elimina una tabla si existe
             :param schema: Schema de la tabla
@@ -446,7 +446,7 @@ class Teradata(DatabaseAPI):
             :param table_dst: Nombre de la tabla destino
             :param pk: Primary key de la tabla
         """
-        self.forced_drop_table(schema_stg, table_stg)
+        self.drop_table_if_exists(schema_stg, table_stg)
         self.retry_fastload(df, schema_stg, table_stg, pk)
 
         named_columns = self._get_named_cols(schema_stg, table_stg, schema_dst, table_dst, 'stg')
@@ -470,7 +470,7 @@ class Teradata(DatabaseAPI):
             :param pk: Primary key de la tabla
             :param parser_limit: Límite de filas para el parser
         """
-        self.forced_drop_table(schema_stg, table_stg)
+        self.drop_table_if_exists(schema_stg, table_stg)
         self.retry_fastload(df, schema_stg, table_stg, pk)
         self.delete_by_primary_key(df, schema_dst, table_dst, pk, parser_limit)
 

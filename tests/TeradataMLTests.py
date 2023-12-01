@@ -70,7 +70,7 @@ class TeradataTests(unittest.TestCase):
         logger.info(f'La carga (upsert) tardó {round(t_qry, 2)} s')
 
     def fastload(self, schema, table):
-        self.td.forced_drop_table(schema, table)
+        self.td.drop_table_if_exists(schema, table)
         logger.info(f'Escribiendo tabla con {len(test_df)} filas vía Fastload')
 
         t_start = time()
@@ -79,7 +79,7 @@ class TeradataTests(unittest.TestCase):
         logger.info(f'La carga tardó {round(t_qry, 2)} s')
 
     def odbc(self, schema, table, flname):
-        self.td.forced_drop_table(schema, table)
+        self.td.drop_table_if_exists(schema, table)
         logger.info(f'Realizando copia de la DDL de la tabla creada con Fastload')
         self.td.create_table_like(schema, table, schema, flname)
         logger.info(f'Escribiendo tabla con {len(test_df)} filas vía insert_dataframe')
