@@ -46,8 +46,6 @@ Argumentos:
 - passw: Contraseña
 - logmech (opcional): Mecanismo de autenticación
 - schema (opcional): Schema por defecto
-
-Devuelve:
 - return: Objeto Teradata
 
 **Ejemplo:**
@@ -107,7 +105,7 @@ Por lo general no es necesario especificar el modo.
 
 Obtiene la fecha desde el servidor
 
-Devuelve:
+Devuelve:  
 return: datetime.date
 
 **Ejemplo:**
@@ -123,7 +121,6 @@ Obtiene una lista de tablas de una base de datos que coinciden con prefijo + nom
 Argumentos:
 - db: Base de datos
 - prefix: Prefijo de la tabla  
-Devuelve:
 - return: DataFrame con las tablas cuyo nombre empieza con el prefijo indicado
 
 **Ejemplo:**
@@ -303,8 +300,6 @@ Argumentos:
 - table_src: Nombre de la tabla origen
 - schema_dst: Schema de la tabla destino
 - table_dst: Nombre de la tabla destino  
-
-Devuelve:
 - return: DataFrame con las diferencias
 
 **Ejemplo:**
