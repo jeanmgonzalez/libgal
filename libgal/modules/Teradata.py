@@ -133,7 +133,7 @@ class Scripting:
 class Teradata(DatabaseAPI):
 
     def __init__(self, host: str, user: str, passw: str,
-                 logmech: Optional[str] = None, schema: Optional[str] = 'DBC'):
+                 logmech: Optional[str] = 'LDAP', schema: Optional[str] = 'DBC'):
         """
         Inicializa una conexión a Teradata
             :param host: Host de la base de datos
