@@ -1,11 +1,20 @@
 # Teradata
 
-## Interfaz para la carga de Dataframes a Teradata por Fastload y/o ODBC
+## Interfaz simplificada para la carga de Dataframes a Teradata por Fastload y/o ODBC
 
 ### Descripción
-Libgal define una interfaz para la carga de DataFrames a Teradata
+Libgal define una interfaz simplificada para la carga de DataFrames a Teradata.
 
-**Índice de características:**
+La carga se realiza por Fastload cuando la cantidad de registros es mayor a 10000, y por ODBC cuando es menor o igual a 10000.  
+El parámetro de corte para utilizar un método u otro se puede modificar con el parámetro odbc_limit.
+
+## Importar la librería
+```python
+from libgal.modules.Teradata import Teradata
+```
+---
+
+**Índice de características y funciones**
 - [Conectarse al motor de base de datos y mantener la conexión abierta.](#instanciar-el-objeto-y-establecer-la-conexión)
 - [Ejecutar sentencias que no retornan datos (ej: create table, drop table, insert, update, delete, etc).](#ejecutar-una-sentencia-sin-retorno-de-datos)
 - [Ejecutar queries que retornan datos (ej: select) y devolver el resultado en un dataframe.](#ejecutar-una-query-que-devuelve-un-dataframe)
@@ -26,11 +35,6 @@ Libgal define una interfaz para la carga de DataFrames a Teradata
 - [Cambiar la base de datos actual.](#cambiar-la-base-de-datos-actual)
 
 
-## Importar la librería
-```python
-from libgal.modules.Teradata import Teradata
-```
----
 ## Instanciar el objeto y establecer la conexión
 ```python
 """
