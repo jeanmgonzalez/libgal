@@ -21,6 +21,24 @@ from libgal.modules.Utils import chunks_df
 logger = Logger(dirname=None).get_logger()
 
 
+def teradata(host, username, password, logmech="LDAP", database=None):
+    """
+    Descripción: Permite la conexion hacia la Base de Teradata
+    Parámetros:
+    - host (String): uri del servidor de base de datos
+    - username (String): Usuario que autentica la conexión a la base de datos
+    - password (String): Contraseña para la autenticación de la connexión de la base de datos
+    - logmech (String): Parámetro Opcional que indica el método de autenticación del usuario. LDAP por defecto
+    - database (String): Parámetro Opcional que indica la base de datos a la cual nos vamos a conectar
+    """
+    if database is not None:
+        td = Teradata(host=host, user=username, passw=password, logmech=logmech.upper(), schema=database)
+    else:
+        td = Teradata(host=host, user=username, passw=password, logmech=logmech.upper())
+
+    return td.connection
+
+
 class Scripting:
 
     def __init__(self):
