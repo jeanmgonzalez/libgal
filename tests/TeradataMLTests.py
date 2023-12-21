@@ -1,28 +1,19 @@
 import unittest
-from getpass import getpass
 from time import time
 from pandas import DataFrame
 from test_dataframe import generate_dataframe
-from libgal.modules.TeradataDB import TeradataDB
+from libgal.modules.Teradata import Teradata
 from libgal.modules.Logger import Logger
+from TestsUtils import ask_user_pwd
 
 logger = Logger().get_logger()
-
-
-def ask_user_pwd():
-    host = input(f'Ingrese host a conectarse: ')
-    logmech = 'LDAP' if input(f'Debería usar LDAP para autenticar (s/n)?: ').strip().lower() == 's' else None
-    usr = input(f'Ingrese usuario de conexión: ')
-    passw = getpass(f'Ingrese la contraseña para el usuario {usr}: ')
-    return host, usr, passw, logmech
-
 
 host, usr, passw, logmech = ask_user_pwd()
 logger.info('Generando dataframe de prueba')
 test_df: DataFrame = generate_dataframe(num_rows=500000)
 logger.info('Realizando conexiones a la base de datos')
 t_st = time()
-teradata = TeradataDB(host=host, user=usr, passw=passw, logmech=logmech)
+teradata = Teradata(host=host, user=usr, passw=passw, logmech=logmech)
 t_conn = time() - t_st
 logger.info('Conexión exitosa')
 logger.info(f'Tiempo de conexión: {round(t_conn, 2)} s')
@@ -70,7 +61,7 @@ class TeradataTests(unittest.TestCase):
         logger.info(f'La carga (upsert) tardó {round(t_qry, 2)} s')
 
     def fastload(self, schema, table):
-        self.td.forced_drop_table(schema, table)
+        self.td.drop_table_if_exists(schema, table)
         logger.info(f'Escribiendo tabla con {len(test_df)} filas vía Fastload')
 
         t_start = time()
@@ -79,7 +70,7 @@ class TeradataTests(unittest.TestCase):
         logger.info(f'La carga tardó {round(t_qry, 2)} s')
 
     def odbc(self, schema, table, flname):
-        self.td.forced_drop_table(schema, table)
+        self.td.drop_table_if_exists(schema, table)
         logger.info(f'Realizando copia de la DDL de la tabla creada con Fastload')
         self.td.create_table_like(schema, table, schema, flname)
         logger.info(f'Escribiendo tabla con {len(test_df)} filas vía insert_dataframe')

@@ -12,6 +12,13 @@ DB_DIR = ['db']
 
 
 def delete_older_files(path: str, max_days: int = 30, dry_run: bool = False, odate = None):
+    """
+    Elimina los archivos de un directorio que superen la antigüedad máxima
+        :param path: Directorio a limpiar
+        :param max_days: Antigüedad máxima en días
+        :param dry_run: Si es True, no elimina los archivos, solo muestra los que eliminaría
+        :param odate: Fecha de referencia para calcular la antigüedad de los archivos
+    """
     for f in listdir(path):
         filepath = join(path, f)
         age_max = max_days * 86400
@@ -31,12 +38,20 @@ def delete_older_files(path: str, max_days: int = 30, dry_run: bool = False, oda
 
 
 def create_dirs(dir_list):
+    """
+    Crea los directorios de la lista (si no existen)
+        :param dir_list: Lista de directorios a crear
+    """
     for dir_ in dir_list:
         logger.info('Creando directorio %s' % dir_)
         Path(dir_).mkdir(parents=True, exist_ok=True)
 
 
 def change_to_public_permissions(path):
+    """
+    Cambia los permisos de los archivos de un directorio a 664
+        :param path: Directorio a cambiar permisos
+    """
     for f in listdir(path):
         filepath = join(path, f)
         if isfile(filepath):
@@ -50,6 +65,10 @@ def change_to_public_permissions(path):
 
 
 def create_output_dirs(home):
+    """
+    Crea los directorios de salida
+        :param home: Directorio raíz
+    """
     chdir(dirname(home))
     all_dirs = OUTPUT_DIRS + DB_DIR
     create_dirs(all_dirs)
@@ -59,6 +78,11 @@ def create_output_dirs(home):
 
 
 def delete_files(path, dry_run=False):
+    """
+    Elimina los archivos de un directorio (si existen)
+        :param path: Directorio a limpiar
+        :param dry_run: Si es True, no elimina los archivos, solo muestra los que eliminaría
+    """
     for f in listdir(path):
         filepath = join(path, f)
         if isfile(filepath):
@@ -74,7 +98,12 @@ def delete_files(path, dry_run=False):
 
 
 def init_env(home):
+    """
+    Inicializa el entorno de ejecución
+        :param home: Directorio raíz
+    """
     create_output_dirs(home)
     for dir_ in OUTPUT_DIRS:
         delete_older_files(dir_, max_days=90)
+    change_to_public_permissions('logs')
     delete_files(Path('output'))

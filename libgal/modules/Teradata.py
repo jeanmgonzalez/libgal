@@ -21,6 +21,24 @@ from libgal.modules.Utils import chunks_df
 logger = Logger(dirname=None).get_logger()
 
 
+def teradata(host, username, password, logmech="LDAP", database=None):
+    """
+    Descripción: Permite la conexion hacia la Base de Teradata
+    Parámetros:
+    - host (String): uri del servidor de base de datos
+    - username (String): Usuario que autentica la conexión a la base de datos
+    - password (String): Contraseña para la autenticación de la connexión de la base de datos
+    - logmech (String): Parámetro Opcional que indica el método de autenticación del usuario. LDAP por defecto
+    - database (String): Parámetro Opcional que indica la base de datos a la cual nos vamos a conectar
+    """
+    if database is not None:
+        td = Teradata(host=host, user=username, passw=password, logmech=logmech.upper(), schema=database)
+    else:
+        td = Teradata(host=host, user=username, passw=password, logmech=logmech.upper())
+
+    return td.connection
+
+
 class Scripting:
 
     def __init__(self):
@@ -130,11 +148,18 @@ class Scripting:
         return str_arr
 
 
-class TeradataDB(DatabaseAPI):
+class Teradata(DatabaseAPI):
 
     def __init__(self, host: str, user: str, passw: str,
-                 logmech: Optional[str] = None, schema: Optional[str] = 'DBC'):
-
+                 logmech: Optional[str] = 'LDAP', schema: Optional[str] = 'DBC'):
+        """
+        Inicializa una conexión a Teradata
+            :param host: Host de la base de datos
+            :param user: Usuario
+            :param passw: Contraseña
+            :param logmech: Mecanismo de autenticación
+            :param schema: Schema por defecto
+        """
         self.context: Optional[Engine] = None
         self.eng: Optional[Engine] = None
         self.conn = None
@@ -148,6 +173,9 @@ class TeradataDB(DatabaseAPI):
         self.connect()
 
     def connect(self):
+        """
+        Realiza la conexión a Teradata
+        """
         user, passw, host, schema = self._conn_params['user'], self._conn_params['pass'], \
                                     self._conn_params['host'], self.schema
 
@@ -162,9 +190,17 @@ class TeradataDB(DatabaseAPI):
             )
 
     def use_db(self, db: str):
+        """
+        Cambia la base de datos por defecto
+            :param db: Nombre de la base de datos
+        """
         self.do(f'DATABASE {db};')
 
     def do(self, query: str):
+        """
+        Ejecuta una query que no devuelve resultados
+            :param query: Query a ejecutar
+        """
         c = self.conn.cursor()
         if isinstance(query, list):
             query_len = len(query)
@@ -195,6 +231,12 @@ class TeradataDB(DatabaseAPI):
         self.conn.commit()
 
     def query(self, query: str, mode: str = 'normal') -> DataFrame:
+        """
+        Ejecuta una query que devuelve resultados
+            :param query: Query a ejecutar
+            :param mode: Modo de ejecución, puede ser 'normal' o 'legacy'
+            :return: DataFrame con los resultados
+        """
         logger.debug(f'Ejecutando query: {query}')
         if mode == 'normal':
             return pd.read_sql(query, self.engine)
@@ -202,11 +244,20 @@ class TeradataDB(DatabaseAPI):
             return pd.read_sql(query, self.connection)
 
     def current_date(self) -> datetime.date:
+        """
+        Devuelve la fecha del servidor de la base de datos
+        """
         query = "select current_date;"
         result_df = self.query(query)
         return result_df['Date'][0]
 
     def show_tables(self, db: str, prefix: str) -> DataFrame:
+        """
+        Devuelve un DataFrame con las tablas que empiezan con un prefijo
+            :param db: Base de datos
+            :param prefix: Prefijo de la tabla
+            :return: DataFrame con las tablas que empiezan con el prefijo
+        """
         query = f"""SELECT  DatabaseName,
             TableName,
             CreateTimeStamp,
@@ -220,24 +271,55 @@ class TeradataDB(DatabaseAPI):
         return self.query(query)
 
     def drop_table(self, schema: str, table: str):
+        """
+        Elimina una tabla
+            :param schema: Schema de la tabla
+            :param table: Nombre de la tabla
+        """
         query = f'DROP TABLE {schema}.{table};'
         self.do(query)
 
     def truncate_table(self, schema: str, table: str):
+        """
+        Trunca una tabla (borra todos los registros pero no la estructura)
+            :param schema: Schema de la tabla
+            :param table: Nombre de la tabla
+        """
         query = f'DELETE FROM {schema}.{table} ALL;'
         self.do(query)
 
     def table_columns(self, schema: str, table: str) -> List[str]:
+        """
+        Devuelve una lista con los nombres de las columnas de una tabla
+            :param schema: Schema de la tabla
+            :param table: Nombre de la tabla
+        """
         query = f'SEL TOP 1 * FROM {schema}.{table};'
         result = self.query(query)
         return result.columns.tolist()
 
     def create_table_like(self, schema: str, table: str, schema_orig: str, table_orig: str):
+        """
+        Crea una tabla con la misma estructura que otra
+            :param schema: Schema de la tabla a crear
+            :param table: Nombre de la tabla a crear
+            :param schema_orig: Schema de la tabla original
+            :param table_orig: Nombre de la tabla original
+        """
         query = f'CREATE TABLE {schema}.{table} AS {schema_orig}.{table_orig} WITH NO DATA;'
         self.do(query)
 
     def insert(self, df: DataFrame, schema: str, table: str, pk: str,
                use_odbc: bool = True, odbc_limit: int = 10000):
+        """
+        Inserta un DataFrame en una tabla
+            :param df: DataFrame a insertar
+            :param schema: Schema de la tabla
+            :param table: Nombre de la tabla
+            :param pk: Primary key de la tabla
+            :param use_odbc: Usar ODBC para la inserción
+            :param odbc_limit: Límite de filas para usar ODBC
+        """
         if len(df) <= odbc_limit and use_odbc:
             parts = chunks_df(df, 5000)
             total = len(parts)
@@ -249,23 +331,52 @@ class TeradataDB(DatabaseAPI):
 
     def upsert(self, df: DataFrame, schema: str, table: str, pk: str,
                use_odbc: bool = True, odbc_limit: int = 10000, parser_limit: int = 10000):
+        """
+        Realiza un upsert en una tabla (insert overwrite)
+            :param df: DataFrame a insertar
+            :param schema: Schema de la tabla
+            :param table: Nombre de la tabla
+            :param pk: Primary key de la tabla
+            :param use_odbc: Usar ODBC para la inserción
+            :param odbc_limit: Límite de filas para usar ODBC
+            :param parser_limit: Límite de filas para el parser
+        """
         self.delete_by_primary_key(df, schema, table, pk, parser_limit)
         self.insert(df, schema, table, pk, use_odbc, odbc_limit)
 
     def get_inserts_from_table(self, schema: str, table: str):
+        """
+        Devuelve una lista de inserts para una tabla
+            :param schema: Schema de la tabla
+            :param table: Nombre de la tabla
+        """
         tablename = f'{schema}.{table}'
         df = load_table(self.engine, tablename, use_quotes=False)
         return inserts_from_dataframe(df, tablename)
 
     @property
     def connection(self):
+        """
+        Devuelve la conexión ODBC a la base de datos
+        """
         return self.conn
 
     @property
     def engine(self):
+        """
+        Devuelve el engine de SQLAlchemy
+        """
         return self.eng
 
     def tml_connect(self, host, user, passw, db, logmech=None):
+        """
+        Crea una conexión a TeradataML
+            :param host: Host de la base de datos
+            :param user: Usuario
+            :param passw: Contraseña
+            :param db: Base de datos
+            :param logmech: Mecanismo de autenticación
+        """
         if logmech is None:
             context = create_context(host=host, user=user, password=passw, database=db)
         else:
@@ -274,10 +385,27 @@ class TeradataDB(DatabaseAPI):
         self.context = context
         return context
 
-    def fastload(self, df, schema, table, pk, index=False):
+    def fastload(self, df: DataFrame, schema: str, table: str, pk: str, index=False):
+        """
+        Realiza un fastload en una tabla
+            :param df: DataFrame a insertar
+            :param schema: Schema de la tabla
+            :param table: Nombre de la tabla
+            :param pk: Primary key de la tabla
+            :param index: Si se debe incluir el índice
+        """
         fastload(df, schema_name=schema, table_name=table, primary_index=pk, index=index)
 
-    def retry_fastload(self, df, schema, table, pk, retries=30, retry_sleep=20):
+    def retry_fastload(self, df: DataFrame, schema: str, table: str, pk: str, retries: int = 30, retry_sleep: int = 20):
+        """
+        Realiza un fastload en una tabla con reintentos
+            :param df: DataFrame a insertar
+            :param schema: Schema de la tabla
+            :param table: Nombre de la tabla
+            :param pk: Primary key de la tabla
+            :param retries: Cantidad de reintentos
+            :param retry_sleep: Tiempo de espera entre reintentos
+        """
         size = len(df)
         while retries > 0:
             try:
@@ -294,6 +422,13 @@ class TeradataDB(DatabaseAPI):
         raise DatabaseError('Se superaron todos los reintentos de fastload')
 
     def diff(self, schema_src: str, table_src: str, schema_dst: str, table_dst: str) -> DataFrame:
+        """
+        Devuelve un DataFrame con las diferencias entre dos tablas
+            :param schema_src: Schema de la tabla origen
+            :param table_src: Nombre de la tabla origen
+            :param schema_dst: Schema de la tabla destino
+            :param table_dst: Nombre de la tabla destino
+        """
         query = f"SELECT * FROM {schema_src}.{table_src} MINUS SELECT * FROM {schema_dst}.{table_dst};"
         difference = self.query(query)
         return difference
@@ -308,14 +443,28 @@ class TeradataDB(DatabaseAPI):
 
         return [f'{prefix}.{x}' for x in columns]
 
-    def forced_drop_table(self, schema: str, table: str):
+    def drop_table_if_exists(self, schema: str, table: str):
+        """
+        Elimina una tabla si existe
+            :param schema: Schema de la tabla
+            :param table: Nombre de la tabla
+        """
         try:
             self.drop_table(schema, table)
         except (pyodbc.ProgrammingError, teradatasql.OperationalError):
             pass
 
     def staging_insert(self, df: DataFrame, schema_stg: str, table_stg: str, schema_dst: str, table_dst: str, pk: str):
-        self.forced_drop_table(schema_stg, table_stg)
+        """
+        Realiza una carga incremental en una tabla
+            :param df: DataFrame a insertar
+            :param schema_stg: Schema de la tabla staging
+            :param table_stg: Nombre de la tabla staging
+            :param schema_dst: Schema de la tabla destino
+            :param table_dst: Nombre de la tabla destino
+            :param pk: Primary key de la tabla
+        """
+        self.drop_table_if_exists(schema_stg, table_stg)
         self.retry_fastload(df, schema_stg, table_stg, pk)
 
         named_columns = self._get_named_cols(schema_stg, table_stg, schema_dst, table_dst, 'stg')
@@ -329,7 +478,17 @@ class TeradataDB(DatabaseAPI):
 
     def staging_upsert(self, df: DataFrame, schema_stg: str, table_stg: str, schema_dst: str,
                        table_dst: str, pk: str, parser_limit: int = 10000):
-        self.forced_drop_table(schema_stg, table_stg)
+        """
+            Realiza un upsert (insert overwrite) incremental en una tabla
+            :param df: DataFrame a insertar
+            :param schema_stg: Schema de la tabla staging
+            :param table_stg: Nombre de la tabla staging
+            :param schema_dst: Schema de la tabla destino
+            :param table_dst: Nombre de la tabla destino
+            :param pk: Primary key de la tabla
+            :param parser_limit: Límite de filas para el parser
+        """
+        self.drop_table_if_exists(schema_stg, table_stg)
         self.retry_fastload(df, schema_stg, table_stg, pk)
         self.delete_by_primary_key(df, schema_dst, table_dst, pk, parser_limit)
 
