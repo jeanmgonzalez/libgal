@@ -47,7 +47,7 @@
         <li><a href="#selenium-web-browser-firefox">Selenium Web Browser Firefox</a></li>
         <li><a href="#teradata">Teradata</a>
           <ul>
-            <li><a href="docs/Teradata.md">Fastload</a></li>
+            <li><a href="docs/Teradata.md">Fastload y cargas incrementales</a></li>
           </ul>
           <ul>
             <li><a href="#teradataerror">TeradataError</a></li>
@@ -193,6 +193,7 @@ log.critical("Esto es un registro de error crítico")
 log.exception("Esto es un registro de excepción")
 log.log("Esto es un registro de log")
 ```
+Ver tests en [FileLoggerTests](tests/FileLoggerTests.py) para mas info sobre logger con salida en archivo. 
 
 <p align="right">(<a href="#readme-top">ir arriba</a>)</p>
 
@@ -290,6 +291,8 @@ except libgal.TeradataError as e:
   print(e)
   
 ```
+
+Ver tests en [Teradata_Basic_Tests](tests/Teradata_Basic_Test.py) para mas info.
 
 <p align="right">(<a href="#readme-top">Ir arriba</a>)</p>
 
@@ -451,7 +454,9 @@ con=libgal.sqlalchemy(host='host', user='usuario', password='password', driver='
 
 conn.InsertDataframe(pandas_dataframe=dataframe,database='esquema', table='tabla')
 ```
-
+Ver tests en [SQLAlchemyTests](tests/SQLAlchemy_test.py) para mas info.  
+Si el dataframe tiene más de 10000 filas es recomendable utilizar [Fastload](docs/Teradata.md#fastloaddf-dataframe-schema-str-table-str-pk-str-index-bool--false) para la carga de datos.   
+Para mas detalles ver: [Teradata](docs/Teradata.md) 
 <br>
 
 
@@ -482,7 +487,7 @@ with con.Session() as session:
 
         print(e)
 ```
-
+Ver tests en [SQLAlchemyTests](tests/SQLAlchemy_test.py) para mas info. 
 <p align="right">(<a href="#readme-top">Ir arriba</a>)</p>
 
 
@@ -502,6 +507,13 @@ Julian Girandez - [@julgiraldez](https://github.com/JuLGiraldez)
 [![LinkedIn][linkedin-shield]][linkedin-url-juli]
 
 <br>
+
+Sebastian Wilwerth - [@swilwerth](https://github.com/VideoMem)
+
+[![LinkedIn][linkedin-shield]][linkedin-url-seba]
+
+<br>
+
 
 Link del proyecto: [https://github.com/jeanmgonzalez/libgal](https://github.com/jeanmgonzalez/libgal)
 
@@ -526,6 +538,7 @@ Link del proyecto: [https://github.com/jeanmgonzalez/libgal](https://github.com/
 [linkedin-shield]:https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url-jean]: https://www.linkedin.com/in/bidata/
 [linkedin-url-juli]: https://www.linkedin.com/in/julian-leandro-giraldez/
+[linkedin-url-seba]: https://ar.linkedin.com/in/sebastian-wilwerth-66781922b?trk=public_profile_browsemap
 [product-screenshot]: images/screenshot.png
 [Next.js]: https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white
 [Next-url]: https://nextjs.org/

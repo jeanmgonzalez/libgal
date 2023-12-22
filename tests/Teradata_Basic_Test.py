@@ -26,11 +26,12 @@ class TeradataBasicTests(unittest.TestCase):
                 cursor.execute(query, data)
                 self.td.commit()
 
-            logger.info("Los datos fueron almacenados correctmente.")
+            logger.error("Los datos fueron almacenados correctmente.")
+            assert False, "No se generó la excepción esperada."
 
         except TeradataError as e:
-            logger.info("Ocurrió un error al intentar almacenar los datos.")
-            logger.error(e)
+            logger.info("Ocurrió un error (esperado) al intentar almacenar los datos.")
+            logger.info(e)
 
     def test_no_exception(self):
         logger.info('Iniciando test sin excepción TeradataError')

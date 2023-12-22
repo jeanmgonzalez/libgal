@@ -35,6 +35,7 @@ try:
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy.ext.declarative import declarative_base
     from sqlalchemy.exc import OperationalError as SQLAlchemyError
+    from libgal.modules.SQLAlchemy import SQLAlchemy as sqlalchemy
 
     # Machine Learning
     from sklearn.base import BaseEstimator, TransformerMixin
@@ -46,6 +47,7 @@ try:
     from libgal.modules.Logger import Logger
     from selenium.webdriver.common.keys import Keys
     from selenium.webdriver.common.action_chains import ActionChains
+    from libgal.modules.MLS import *
 
 
 except ImportError as imp_err:
@@ -155,67 +157,4 @@ def html_parser(html):
 
     return soup
 
-
-class sqlalchemy:
-    """
-    Descripción: Permite la conexion hacia la Base de Datos
-    Parámetros:
-    - driver (String): Tipo de conexión o base de datos a utilizar
-    - host (String): uri del servidor de base de datos
-    - username (String): Usuario que autentica la conexión a la base de datos
-    - password (String): Contraseña para la autenticación de la connexión de la base de datos
-    - logmech (String): Parámetro Opcional que indica el método de autenticación del usuario. LDAP por defecto
-    """
-
-    def __init__(self, driver, host, username, password, logmech="LDAP", timeout_seconds=None, pool_recycle=1800,
-                 pool_size=20):
-
-        if driver.lower() == "teradata":
-            if timeout_seconds:
-                self.engine = create_engine(f"teradatasql://{username}:{password}@{host}/?logmech={logmech.upper()}",
-                                            pool_recycle=pool_recycle, pool_size=pool_size,
-                                            connect_args={'connect_timeout': timeout_seconds})
-            else:
-                self.engine = create_engine(f"teradatasql://{username}:{password}@{host}/?logmech={logmech.upper()}",
-                                            pool_recycle=pool_recycle, pool_size=pool_size)
-        elif driver.lower() == "mysql":
-            self.engine = create_engine(f"mysql+mysqlconnector://{username}:{password}@{host}/",
-                                        pool_recycle=pool_recycle, pool_size=pool_size)
-
-    def Session(self):
-        self.Session = sessionmaker(bind=self.engine)
-        return self.Session()
-
-    def Base(self):
-        return declarative_base()
-
-    def query(self, query):
-        """
-        Descripción: Permite ejecutar una instrucción SQL según el motor de Base de Datos.
-        Parámetro:
-        - query (String): Instrucción SQL a ejecutar
-        """
-        with self.engine.connect() as conn:
-            return conn.execute(text(query))
-
-    def InsertDataframe(self, pandas_dataframe, database, table):
-
-        """
-        Descripción: Permite ejecutar una instrucción SQL según el motor de Base de Datos.
-        Parámetro:
-        - pandas_dataframe: Dataframe de Pandas que contiene la info a insertar
-        - database (String): Base de datos que contiene la tabla a poblar.
-        - table (String): Tabla donde se insertaran los datos del Dataframe
-        """
-
-        with self.engine.connect() as conn:
-
-            pandas_dataframe = pandas_dataframe.astype(str)
-
-            try:
-
-                pandas_dataframe.to_sql(table, schema=database, con=conn, if_exists='append', index=False)
-
-            except SQLAlchemyError as e:
-                print(e)
 
