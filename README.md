@@ -47,7 +47,7 @@
         <li><a href="#selenium-web-browser-firefox">Selenium Web Browser Firefox</a></li>
         <li><a href="#teradata">Teradata</a>
           <ul>
-            <li><a href="docs/Teradata.md">Fastload</a></li>
+            <li><a href="docs/Teradata.md">Fastload y cargas incrementales</a></li>
           </ul>
           <ul>
             <li><a href="#teradataerror">TeradataError</a></li>
@@ -291,7 +291,9 @@ except libgal.TeradataError as e:
   print(e)
   
 ```
-Ver tests en [SQLAlchemyTests](tests/SQLAlchemy_test.py) para mas info. 
+
+Ver tests en [Teradata_Basic_Tests](tests/Teradata_Basic_Test.py) para mas info.
+
 <p align="right">(<a href="#readme-top">Ir arriba</a>)</p>
 
 ### **HTML_Parser**
@@ -452,9 +454,9 @@ con=libgal.sqlalchemy(host='host', user='usuario', password='password', driver='
 
 conn.InsertDataframe(pandas_dataframe=dataframe,database='esquema', table='tabla')
 ```
-
-Si el dataframe tiene más de 10000 filas es recomendable utilizar [Fastload](docs/Teradata.md#fastloaddf-dataframe-schema-str-table-str-pk-str-index-bool--false) para la carga de datos. 
-Para mas detalles ver: [Teradata](docs/Teradata.md)
+Ver tests en [SQLAlchemyTests](tests/SQLAlchemy_test.py) para mas info.  
+Si el dataframe tiene más de 10000 filas es recomendable utilizar [Fastload](docs/Teradata.md#fastloaddf-dataframe-schema-str-table-str-pk-str-index-bool--false) para la carga de datos.   
+Para mas detalles ver: [Teradata](docs/Teradata.md) 
 <br>
 
 
@@ -536,7 +538,7 @@ Link del proyecto: [https://github.com/jeanmgonzalez/libgal](https://github.com/
 [linkedin-shield]:https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url-jean]: https://www.linkedin.com/in/bidata/
 [linkedin-url-juli]: https://www.linkedin.com/in/julian-leandro-giraldez/
-[linkedin-url-seba]: https://www.linkedin.com/in/sebastian-wilwerth
+[linkedin-url-seba]: https://ar.linkedin.com/in/sebastian-wilwerth-66781922b?trk=public_profile_browsemap
 [product-screenshot]: images/screenshot.png
 [Next.js]: https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white
 [Next-url]: https://nextjs.org/
