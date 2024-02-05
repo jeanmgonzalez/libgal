@@ -89,6 +89,8 @@ La instación de esta librería se hace mediante siguiente sentencia:
 pip install libgal
 ```
 
+Para mas información sobre la instalación de la librería, por favor consulte la [documentación de instalación](docs/Installation.md).
+
 <p align="right">(<a href="#readme-top">Ir arriba</a>)</p>
 
 <!-- FUNCIONALIDADES -->
