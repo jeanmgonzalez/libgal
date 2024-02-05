@@ -6,6 +6,8 @@ import os
 import datetime
 from typing import Optional
 
+DEFAULT_FILE_BUFFER_SIZE = 1024 * 1024  # 1 MB
+
 
 class SingletonType(type):
     _instances = {}
@@ -18,7 +20,7 @@ class SingletonType(type):
 
 
 class BufferingHandler(logging.Handler):
-    def __init__(self, filename, encoding='utf-8', buffer_size=1024 * 1024):  # Default buffer size is 1 MB
+    def __init__(self, filename, encoding='utf-8', buffer_size=DEFAULT_FILE_BUFFER_SIZE):
         super().__init__()
         self.buffer_size = buffer_size
         self.filename = filename
@@ -45,6 +47,10 @@ class BufferingHandler(logging.Handler):
         self.fp.close()
         super().close()
 
+    @property
+    def baseFilename(self):
+        return self.filename
+
 
 class Logger(object, metaclass=SingletonType):
 
@@ -54,46 +60,23 @@ class Logger(object, metaclass=SingletonType):
             self,
             format_output: Optional[str] = None,
             app_name: Optional[str] = __name__,
-            dirname: Optional[str] = "./logs"
+            dirname: Optional[str] = None,
+            level: Optional[int] = logging.DEBUG
     ):
         self._logger = logging.getLogger(app_name)
 
-        ##Cierra las conexiones de logueo activos Handler
-        for handler in self._logger.handlers[:]:
-            handler.close()
-            logger.removeHandler(handler)
-
-        self._logger.setLevel(logging.DEBUG)
+        self._logger.setLevel(level)
         self._id = id(self)
 
-        if format_output is not None and format_output.lower() == 'json':
-            formatter = logging.Formatter(
-                "{'time':'%(asctime)s', 'name': '%(name)s','level': '%(levelname)s', 'message': '%(message)s'}",
-                datefmt='%m/%d/%Y %I:%M:%S %p')
-        elif format_output is not None and format_output.lower() == 'csv':
-            formatter = logging.Formatter('%(asctime)s;%(name)s;%(levelname)s;%(message)s',
-                                         datefmt='%m/%d/%Y %I:%M:%S %p')
-        else:
-            formatter = logging.Formatter(
-                f'%(asctime)s PID: %(process)d ({self._id}) %(threadName)s [%(levelname)s | %(filename)s:%(lineno)s] > %(message)s'
-            )
-
-        now = datetime.datetime.now()
-
-        if dirname is not None:
-            if not os.path.isdir(dirname):
-                os.mkdir(dirname)
-
-            fileHandler = BufferingHandler(
-                dirname + "/log_" + now.strftime("%Y-%m-%d") + ".log", encoding='utf-8')
-
-            fileHandler.setFormatter(formatter)
-            self._logger.addHandler(fileHandler)
+        formatter = self.set_format(format_output)
 
         streamHandler = logging.StreamHandler()
         streamHandler.setFormatter(formatter)
-
         self._logger.addHandler(streamHandler)
+
+        if dirname is not None:
+            self.set_outputdir(dirname, format_output)
+
         self._logger.info(f"Generate new instance, hash = {self._id}")
 
     def __del__(self):
@@ -104,6 +87,52 @@ class Logger(object, metaclass=SingletonType):
 
     def get_id(self):
         return self._id
+
+    def set_format(self, format_output: Optional[str]):
+        formatter = None
+        if format_output is not None and format_output.lower() == 'json':
+            formatter = logging.Formatter(
+                "{'time':'%(asctime)s', 'pid': '%(process)d', 'instance_hash': " 
+                f"'{self._id}', "
+                "'thread', '%(threadName)s', 'name': '%(name)s', 'level': '%(levelname)s', 'file': '%(filename)s', "
+                "'lineno': %(lineno)s, 'message': '%(message)s'}",
+                datefmt='%m/%d/%Y %I:%M:%S %p'
+            )
+        elif format_output is not None and format_output.lower() == 'csv':
+            formatter = logging.Formatter(
+                '%(asctime)s, %(process)d, '
+                f"{self._id}, "
+                '%(threadName)s, %(name)s, %(levelname)s, %(filename)s, %(lineno)s, "%(message)s"',
+                datefmt='%m/%d/%Y %I:%M:%S %p'
+            )
+        else:
+            formatter = logging.Formatter(
+                f'%(asctime)s PID: %(process)d ({self._id}) %(threadName)s [%(levelname)s | %(filename)s:%(lineno)s] '
+                f'> %(message)s '
+            )
+
+        for handler in self._logger.handlers:
+            handler.setFormatter(formatter)
+
+        return formatter
+
+    def set_outputdir(self, dirname: Optional[str], log_format: Optional[str] = None):
+        if dirname is not None:
+            if not os.path.isdir(dirname):
+                os.mkdir(dirname)
+            formatter = self.set_format(log_format)
+            now = datetime.datetime.now()
+            for handler in self._logger.handlers:
+                if isinstance(handler, BufferingHandler):
+                    handler.close()
+                    self._logger.removeHandler(handler)
+
+            file_handler = BufferingHandler(
+                dirname + "/log_" + now.strftime("%Y-%m-%d") + ".log", encoding='utf-8')
+            file_handler.setFormatter(formatter)
+            self._logger.addHandler(file_handler)
+        else:
+            self._logger.warning("No se ha especificado un directorio de salida para los logs")
 
 
 # a simple usecase

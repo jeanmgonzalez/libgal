@@ -44,7 +44,6 @@ try:
     from collections import defaultdict
     from scipy.stats import ks_2samp
     from sklearn.metrics import roc_curve, roc_auc_score
-    from libgal.modules.Logger import Logger
     from selenium.webdriver.common.keys import Keys
     from selenium.webdriver.common.action_chains import ActionChains
     from libgal.modules.MLS import *
@@ -85,13 +84,17 @@ def logger(format_output="JSON", app_name=__name__):
     - format_output (String): Tipo de Salida del Log (JSON, CSV)
     - app_name (String): Nombre de la aplicación para el log
     """
+    from libgal.modules.Logger import Logger
+
     if format_output not in ['CSV', 'JSON']:
         raise LoggerFormatException("Tipo de formato de Log inválido. Formatos soportados (JSON y CSV).")
-    # Create a custom logger
-    logger = Logger(format_output=format_output, app_name=app_name, dirname=None).get_logger()
-    logger.setLevel(logging.INFO)
 
-    return logger
+    # Create a custom logger
+    _logger = Logger(format_output=format_output, app_name=app_name, dirname=None)
+    _logger.set_format(format_output)
+    _logger.get_logger().setLevel(logging.INFO)
+
+    return _logger.get_logger()
 
 
 def shutdown_logger():
