@@ -169,9 +169,9 @@ class Teradata(DatabaseAPI):
             'user': user,
             'pass': passw,
         }
-        self.connect()
         from libgal.modules.Logger import Logger
         self._logger = Logger(dirname=None).get_logger()
+        self.connect()
 
     def connect(self):
         """
