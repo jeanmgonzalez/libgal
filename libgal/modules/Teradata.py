@@ -10,15 +10,12 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError
 
 from libgal.modules.DatabaseAPI import DatabaseAPI, DatabaseError
-from libgal.modules.Logger import Logger
 from libgal.modules.ODBCTools import load_table, inserts_from_dataframe
 from time import sleep
 from teradataml.context.context import create_context
 from teradataml.dataframe.fastload import fastload
 from teradatasql import OperationalError as tdOperationalError
 from libgal.modules.Utils import chunks_df
-
-logger = Logger(dirname=None).get_logger()
 
 
 def teradata(host, username, password, logmech="LDAP", database=None):
@@ -43,6 +40,8 @@ class Scripting:
 
     def __init__(self):
         self._script = []
+        from libgal.modules.Logger import Logger
+        self._logger = Logger(dirname=None).get_logger()
 
     def begin_transaction(self):
         self._script.append({
@@ -72,8 +71,8 @@ class Scripting:
                     elif ('Id' in name or 'Num' in name) and value == int(value):
                         row[name] = int(value)
             except ValueError as e:
-                logger.error(e)
-                logger.debug(row)
+                self._self._logger.error(e)
+                self._self._logger.debug(row)
                 raise e
 
             insert = f'INSERT INTO {schema}.{table}' + ' (' + columns + ') VALUES (' + \
@@ -171,6 +170,8 @@ class Teradata(DatabaseAPI):
             'pass': passw,
         }
         self.connect()
+        from libgal.modules.Logger import Logger
+        self._logger = Logger(dirname=None).get_logger()
 
     def connect(self):
         """
@@ -180,7 +181,7 @@ class Teradata(DatabaseAPI):
                                     self._conn_params['host'], self.schema
 
         if self.schema is not None:
-            logger.info('Conectando TeradataML')
+            self._logger.info('Conectando TeradataML')
             self.tml_connect(host, user, passw, schema, self.logmech)
             self.conn = self.context.raw_connection()
             self.eng: Engine = self.context
@@ -205,11 +206,11 @@ class Teradata(DatabaseAPI):
         if isinstance(query, list):
             query_len = len(query)
             lock_echo = 0
-            logger.info(f'Tamaño de la query: {query_len} sentencias')
+            self._logger.info(f'Tamaño de la query: {query_len} sentencias')
             for ix, item in enumerate(query):
                 percent = ix * 100 / query_len
                 if int(percent) % 2 == 0 and int(percent) != lock_echo:
-                    logger.info(f'Ejecutando SQL script, {int(percent)}% completado')
+                    self._logger.info(f'Ejecutando SQL script, {int(percent)}% completado')
                     lock_echo = int(percent)
                 try:
                     if len(item['values']) > 0:
@@ -217,14 +218,14 @@ class Teradata(DatabaseAPI):
                     else:
                         c.execute(item['statement'])
                 except (pyodbc.ProgrammingError, pyodbc.Error, pyodbc.IntegrityError, UnicodeEncodeError) as e:
-                    logger.error(str(e).replace('\\x00', ''))
-                    logger.debug(item['statement'])
+                    self._logger.error(str(e).replace('\\x00', ''))
+                    self._logger.debug(item['statement'])
                     if len(item['values']) > 0:
-                        logger.debug(item['values'])
+                        self._logger.debug(item['values'])
                     raise DatabaseError
 
         else:
-            logger.debug(f'Ejecutando query: {query}')
+            self._logger.debug(f'Ejecutando query: {query}')
             c.execute(query)
 
         c.close()
@@ -237,7 +238,7 @@ class Teradata(DatabaseAPI):
             :param mode: Modo de ejecución, puede ser 'normal' o 'legacy'
             :return: DataFrame con los resultados
         """
-        logger.debug(f'Ejecutando query: {query}')
+        self._logger.debug(f'Ejecutando query: {query}')
         if mode == 'normal':
             return pd.read_sql(query, self.engine)
         else:
@@ -324,7 +325,7 @@ class Teradata(DatabaseAPI):
             parts = chunks_df(df, 5000)
             total = len(parts)
             for i, chunk in enumerate(parts):
-                logger.info(f'Cargando lote {i+1} de {total}')
+                self._logger.info(f'Cargando lote {i+1} de {total}')
                 chunk.to_sql(name=table, con=self.engine, schema=schema, if_exists='append', index=False)
         else:
             self.retry_fastload(df, schema, table, pk)
@@ -409,12 +410,12 @@ class Teradata(DatabaseAPI):
         size = len(df)
         while retries > 0:
             try:
-                logger.info(f'Ejecutando fastload en {schema}.{table} ({size} filas)')
+                self._logger.info(f'Ejecutando fastload en {schema}.{table} ({size} filas)')
                 self.fastload(df, schema=schema, table=table, pk=pk, index=False)
                 return True
             except tdOperationalError as e:
                 if '2663' in e:
-                    logger.warning(e)
+                    self._logger.warning(e)
                     sleep(retry_sleep)
                     retries -= 1
                 else:
@@ -437,7 +438,7 @@ class Teradata(DatabaseAPI):
         try:
             columns = self.table_columns(schema_dst, table_dst)
         except (pyodbc.ProgrammingError, teradatasql.OperationalError, OperationalError):
-            logger.warning('La tabla destino no existe, creando DDL por inferencia de tipos de datos')
+            self._logger.warning('La tabla destino no existe, creando DDL por inferencia de tipos de datos')
             columns = self.table_columns(schema_stg, table_stg)
             self.create_table_like(schema_dst, table_dst, schema_stg, table_stg)
 
