@@ -63,6 +63,7 @@
           </ul>
         </li>
         <li><a href="docs/FSUtils.md">Utilidades del filesystem</a></li>
+        <li><a href="docs/Utils.md">Utilidades complementarias</a></li>
       </ul>
     </li>
     <li><a href="#contacto">Contacto</a></li>
