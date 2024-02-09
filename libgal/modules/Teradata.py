@@ -29,9 +29,9 @@ def teradata(host, username, password, logmech="LDAP", database=None):
     - database (String): Parámetro Opcional que indica la base de datos a la cual nos vamos a conectar
     """
     if database is not None:
-        td = Teradata(host=host, user=username, passw=password, logmech=logmech.upper(), schema=database)
+        td = TeradataML(host=host, user=username, passw=password, logmech=logmech.upper(), schema=database)
     else:
-        td = Teradata(host=host, user=username, passw=password, logmech=logmech.upper())
+        td = TeradataML(host=host, user=username, passw=password, logmech=logmech.upper())
 
     return td.connection
 
@@ -147,7 +147,7 @@ class Scripting:
         return str_arr
 
 
-class Teradata(DatabaseAPI):
+class TeradataML(DatabaseAPI):
 
     def __init__(self, host: str, user: str, passw: str,
                  logmech: Optional[str] = 'LDAP', schema: Optional[str] = 'DBC'):
@@ -369,6 +369,13 @@ class Teradata(DatabaseAPI):
         """
         return self.eng
 
+    @property
+    def is_connected(self):
+        """
+        Devuelve si la conexión está activa
+        """
+        return self.conn is not None
+
     def tml_connect(self, host, user, passw, db, logmech=None):
         """
         Crea una conexión a TeradataML
@@ -501,3 +508,21 @@ class Teradata(DatabaseAPI):
 
         self.do(query)
         self.drop_table(schema_stg, table_stg)
+
+
+class Teradata(TeradataML):
+
+    def __init__(self, host: str, user: str, passw: str,
+                 logmech: Optional[str] = 'LDAP', schema: Optional[str] = 'DBC'):
+        """
+        Inicializa una conexión a Teradata
+            :param host: Host de la base de datos
+            :param user: Usuario
+            :param passw: Contraseña
+            :param logmech: Mecanismo de autenticación
+            :param schema: Schema por defecto
+        """
+        from libgal.modules.Logger import Logger
+        self._logger = Logger(dirname=None).get_logger()
+        self._logger.warning('FutureWarning: Teradata está deprecado, utilice TeradataML en su lugar')
+        super().__init__(host, user, passw, logmech, schema)

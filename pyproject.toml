@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "libgal"
-version = "1.0.1"
+version = "1.0.2"
 authors = [
   { name="Jean Manuel González Mejía", email="ebrainding@gmail.com" },
   { name="Julián Leandro Giraldez", email="juliangiraldez@outlook.com"},

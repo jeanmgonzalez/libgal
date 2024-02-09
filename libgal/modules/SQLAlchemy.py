@@ -3,7 +3,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.exc import OperationalError as SQLAlchemyError
-from libgal.modules.Teradata import Teradata
+from libgal.modules.Teradata import TeradataML
 
 
 class SQLAlchemy:
@@ -21,7 +21,7 @@ class SQLAlchemy:
                  pool_size=20):
 
         if driver.lower() == "teradata":
-            self._engine = Teradata(host=host, user=username, passw=password, logmech=logmech).engine
+            self._engine = TeradataML(host=host, user=username, passw=password, logmech=logmech).engine
         elif driver.lower() == "mysql":
             self._engine = create_engine(f"mysql+mysqlconnector://{username}:{password}@{host}/",
                                         pool_recycle=pool_recycle, pool_size=pool_size)

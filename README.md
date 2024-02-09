@@ -50,6 +50,9 @@
             <li><a href="docs/Teradata.md">Fastload y cargas incrementales</a></li>
           </ul>
           <ul>
+            <li><a href="docs/by_example/Teradata_Examples.md">Ejemplos de uso</a></li>
+          </ul>
+          <ul>
             <li><a href="#teradataerror">TeradataError</a></li>
           </ul>
         </li>

@@ -110,7 +110,7 @@ def hash_primary_key(
             :param trim: la cantidad de caracteres que se tomarán del hash generado
             :return: la clave única
     """
-    string = ''.join([row[field] for field in fields])
+    string = ''.join([str(row[field]) for field in fields])
     sha256_string_hash_hex = hashlib.sha256(string.encode()).hexdigest()
     if timestamp_field is None:
         if trim is None:
@@ -123,8 +123,8 @@ def hash_primary_key(
         if trim is None:
             trim = 12
         if timestamp_format.lower() == 'iso' or timestamp_format.lower() == 'iso8601':
-            unix_epoch = datetime.fromisoformat(row[timestamp_field]).timestamp()
+            unix_epoch = datetime.fromisoformat(str(row[timestamp_field])).timestamp()
         else:
-            unix_epoch = datetime.strptime(row[timestamp_field], timestamp_format).timestamp()
+            unix_epoch = datetime.strptime(str(row[timestamp_field]), timestamp_format).timestamp()
         return f"{int(unix_epoch)}_{sha256_string_hash_hex[0:trim]}"
 

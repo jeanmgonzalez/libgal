@@ -153,6 +153,8 @@ String con caracteres no latin1: áéíóúñçü, ÁÉÍÓÚÑÇÜ, 1234567890,
 String sin caracteres no latin1: áéíóúñçü, ÁÉÍÓÚÑÇÜ, 1234567890, !@#$%^&*()_+-=[]{};:<>¿?/.\
 ```
 
+[Volver a inicio del documento](#funciones)
+
 ## powercenter_compat_str
 
 Esta función ajusta un string para ser compatible con FlatFile de PowerCenter.
@@ -376,6 +378,6 @@ DataFrame con hash:
 |  1 | provincial | alicia    | maria    | gomez      |         1114578 | 31cab20123 |
 +----+------------+-----------+----------+------------+-----------------+------------+
 ```
-Al momento de truncar el hash, se debe tener en cuenta que se puede generar colisiones, por lo que se debe elegir un tamaño de hash que minimice las colisiones.
+Al momento de truncar el hash, se debe tener en cuenta que se puede generar colisiones, por lo que se debe elegir un tamaño de hash que minimice la probabilidad de colisiones.
 
 [Volver a inicio del documento](#funciones)
