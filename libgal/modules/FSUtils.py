@@ -1,3 +1,4 @@
+import os
 from os import listdir, stat, remove, chdir
 from os.path import isfile, join, dirname
 from pathlib import Path
@@ -102,6 +103,7 @@ def init_env(home):
     Inicializa el entorno de ejecución
         :param home: Directorio raíz
     """
+    os.chdir(home)
     create_output_dirs(home)
     for dir_ in OUTPUT_DIRS:
         delete_older_files(dir_, max_days=90)

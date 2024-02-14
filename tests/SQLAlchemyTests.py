@@ -5,8 +5,7 @@ from sqlalchemy.ext.declarative import declarative_base
 import libgal
 from pandas import DataFrame
 from libgal.modules.Logger import Logger
-from TestsUtils import ask_user_pwd
-from test_dataframe import generate_dataframe
+from libgal.modules.Utils import generate_dataframe, ask_user_pwd
 
 
 logger = Logger().get_logger()
@@ -88,7 +87,7 @@ class SQLAlchemyTests(unittest.TestCase):
         # Inserta el dataframe
         t_start = time()
         logger.info(f'Insertando datos en tabla {table_schema}.{table_name}')
-        self.con.InsertDataframe(test_df, table_schema, table_name)
+        self.con.insert(test_df, table_schema, table_name)
         elapsed = time() - t_start
         logger.info(f'Tiempo de inserción: {elapsed: .2f} segundos')
 
@@ -107,7 +106,6 @@ class SQLAlchemyTests(unittest.TestCase):
 
         except libgal.SQLAlchemyError as e:
             session.rollback()
-            logger.info(e)
 
         session.close()
 

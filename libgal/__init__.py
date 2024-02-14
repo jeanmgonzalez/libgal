@@ -62,13 +62,14 @@ def variables_entorno(path_env_file=None):
     """
 
     if path_env_file != None and Path(path_env_file).exists():
-
         load_dotenv(path_env_file)
-
     else:
-
-        print(
-            f"No se encontró el archivo {path_env_file} indicado para funcion variables_entorno() de libgal por lo que se toma las variables de entorno de sistema.")
+        from libgal.modules.Logger import Logger
+        logger = Logger().get_logger()
+        logger.warning(
+            f"No se encontró el archivo {path_env_file} indicado para funcion variables_entorno() de libgal por lo "
+            f"que se toma las variables de entorno de sistema."
+        )
 
     return dict(os.environ)
 
