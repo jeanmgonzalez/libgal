@@ -184,7 +184,7 @@ con = libgal.sqlalchemy(host='host', user='usuario', password='password', driver
 
 con.insert(pandas_dataframe=dataframe, database='esquema', table='tabla')
 ```
-Ver tests en [SQLAlchemyTests](../tests/SQLAlchemy_test.py) para más info.  
+Ver tests en [SQLAlchemyTests](../tests/SQLAlchemyTests.py) para más info.  
 Si el dataframe tiene más de 10000 filas es recomendable utilizar [Fastload](./Teradata.md#fastloaddf-dataframe-schema-str-table-str-pk-str-index-bool--false) para la carga de datos.   
 Para más detalles ver: [Teradata](./Teradata.md)
 
