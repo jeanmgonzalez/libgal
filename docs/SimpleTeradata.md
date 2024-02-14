@@ -1,8 +1,8 @@
 ## Teradata ODBC (Conexión Cruda ODBC)
 
-Para simplificar un poco las conexiones a Teradata Database se agregó esta nueva funcionalidad.
-
 [Volver al readme principal](../README.md)
+
+Para simplificar un poco las conexiones a Teradata Database se agregó esta nueva funcionalidad.
 
 La misma consta de solo 3 parámetros:
 
@@ -45,6 +45,6 @@ except libgal.TeradataError as e:
  
 ```
 
-Ver tests en [Teradata_Basic_Tests](tests/Teradata_Basic_Test.py) para mas info.
+Ver tests en [Teradata_Basic_Tests](../tests/Teradata_Basic_Test.py) para mas info.
 
 [Ir al inicio](#teradata-simple-sin-teradataml)

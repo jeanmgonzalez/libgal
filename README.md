@@ -8,7 +8,7 @@ Librería para agilizar el desarrollo de productos de datos en Python.
 
 - [Descripción General](#descripción-general)
 - [Instalación](#instalalación)
-- [Proyecto básico](#proyecto-basico)
+- [Proyecto básico](#proyecto-básico)
 - [Funcionalidades](#tabla-de-contenidos)
   - [Variables de Entorno](docs/LoadEnv.md)
   - [Registro de Logs](docs/Logger.md)
