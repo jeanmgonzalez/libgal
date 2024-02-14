@@ -68,11 +68,7 @@ class Logger(object, metaclass=SingletonType):
         self._logger.setLevel(level)
         self._id = id(self)
 
-        formatter = self.set_format(format_output)
-
-        streamHandler = logging.StreamHandler()
-        streamHandler.setFormatter(formatter)
-        self._logger.addHandler(streamHandler)
+        self.set_format(format_output)
 
         if dirname is not None:
             self.set_outputdir(dirname, format_output)
@@ -111,8 +107,16 @@ class Logger(object, metaclass=SingletonType):
                 f'> %(message)s '
             )
 
+        found_stream_handler = False
         for handler in self._logger.handlers:
+            if isinstance(handler, logging.StreamHandler):
+                found_stream_handler = True
             handler.setFormatter(formatter)
+
+        if not found_stream_handler:
+            streamHandler = logging.StreamHandler()
+            streamHandler.setFormatter(formatter)
+            self._logger.addHandler(streamHandler)
 
         return formatter
 

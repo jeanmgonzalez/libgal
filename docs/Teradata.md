@@ -8,7 +8,9 @@ Libgal define una interfaz simplificada para la carga de DataFrames a Teradata.
 La carga se realiza por Fastload cuando la cantidad de registros es mayor a 10000, y por ODBC cuando es menor o igual a 10000.  
 El parámetro de corte para utilizar un método u otro se puede modificar con el parámetro odbc_limit.
 
-Para ver ejemplos de uso, ver la sección de [Ejemplos](by_example/Teradata_Examples.md).
+Para ver ejemplos de uso, ver la sección de [Ejemplos](by_example/TeradataExamples.md).
+
+[Volver al readme principal](../README.md)
 
 ## Importar la librería
 

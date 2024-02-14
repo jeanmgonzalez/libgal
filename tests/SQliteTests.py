@@ -2,7 +2,7 @@ import unittest
 from time import time
 from pandas import DataFrame
 from libgal.modules.Logger import Logger
-from test_dataframe import generate_dataframe
+from libgal.modules.Utils import generate_dataframe
 from libgal.modules.SQLMemory import SQLMemory
 import os
 

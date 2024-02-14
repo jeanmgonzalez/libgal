@@ -1,5 +1,7 @@
 ## Instrucciones de instalación
 
+[Volver al readme principal](../README.md)
+
 ### Requisitos previos
 
 - [Python](https://www.python.org/downloads/) 3.7 o versión superior

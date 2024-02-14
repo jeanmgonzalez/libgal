@@ -1,7 +1,7 @@
 import unittest
 from libgal.modules.Logger import Logger
 from libgal import teradata, TeradataError
-from TestsUtils import ask_user_pwd
+from libgal.modules.Utils import ask_user_pwd
 
 logger = Logger().get_logger()
 

@@ -2,6 +2,8 @@
 
 En este módulo se encuentran funciones auxiliares de libgal.
 
+[Volver al readme principal](../README.md)
+
 ### Importar
 
 ```python
