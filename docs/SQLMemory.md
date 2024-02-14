@@ -5,6 +5,8 @@
 ### Descripción
 La clase SQLMemory permite cargar Dataframes a SQL en memoria y hacer consultas sobre ellos.
 
+[Volver al readme principal](../README.md)
+
 ### Importar la librería
 ```python
 from libgal.modules.SQLMemory import SQLMemory

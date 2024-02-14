@@ -8,13 +8,18 @@ Libgal define una interfaz simplificada para la carga de DataFrames a Teradata.
 La carga se realiza por Fastload cuando la cantidad de registros es mayor a 10000, y por ODBC cuando es menor o igual a 10000.  
 El parámetro de corte para utilizar un método u otro se puede modificar con el parámetro odbc_limit.
 
+Para ver ejemplos de uso, ver la sección de [Ejemplos](by_example/TeradataExamples.md).
+
+[Volver al readme principal](../README.md)
+
 ## Importar la librería
+
 ```python
-from libgal.modules.Teradata import Teradata
+from libgal.modules.Teradata import TeradataML
 ```
 ---
 
-**Índice**
+## Índice
 - [Conectarse al motor de base de datos y mantener la conexión abierta.](#teradatahost-str-user-str-passw-str-logmech-str--ldap-schema-str--none)
 - [Ejecutar sentencias que no retornan datos (ej: create table, drop table, insert, update, delete, etc).](#doquery-str--executequery-str)
 - [Ejecutar queries que retornan datos (ej: select) y devolver el resultado en un dataframe.](#queryquery-str-mode-str--normal---dataframe)
@@ -50,7 +55,7 @@ Argumentos:
 
 **Ejemplo:**
 ```python
-td = Teradata(host='nombre_host', user='usuario', passw='contraseña')
+td = TeradataML(host='nombre_host', user='usuario', passw='contraseña')
 ```
 
 Si se va a usar TD2 para la autenticación, se debe especificar el parámetro logmech='TD2'.  
@@ -70,6 +75,8 @@ Argumentos:
 td.use_db('nombre_base_datos')
 ```
 
+[Volver al inicio del documento](#Índice)
+
 ---
 ### do(query: str) / execute(query: str)
 Ejecuta una sentencia sin retorno de datos. 
@@ -81,6 +88,8 @@ Argumentos:
 ```python
 td.do('CREATE TABLE tabla (campo1 INT, campo2 VARCHAR(10))')
 ```
+
+[Volver al inicio del documento](#Índice)
 
 ---
 ### query(query: str, mode: str = 'normal') -> DataFrame 
@@ -99,6 +108,7 @@ Si se especifica el parámetro mode='legacy', utiliza el driver ODBC en vez de e
 Esto puede ser útil para ejecutar queries que no son soportadas por el engine de SQLAlchemy.  
 Por lo general no es necesario especificar el modo.  
 
+[Volver al inicio del documento](#Índice)
 
 ---
 ### current_date() 
@@ -112,6 +122,8 @@ return: datetime.date
 ```python
 current_date = td.current_date()
 ```
+
+[Volver al inicio del documento](#Índice)
 
 ---
 ### show_tables(db: str, prefix: str) -> DataFrame
@@ -127,6 +139,8 @@ Argumentos:
 ```python
 tablas_df = td.show_tables(db='nombre_base_datos', prefix='prefijo_tabla')
 ```
+
+[Volver al inicio del documento](#Índice)
 
 ---
 ### drop_table(schema: str, table: str)
@@ -144,6 +158,8 @@ td.drop_table(schema='nombre_schema', table='nombre_tabla')
 Ejecuta DROP TABLE nombre_schema.nombre_tabla;  
 Si la tabla no existe, se produce una excepción teradatasql.OperationalError.  
 
+[Volver al inicio del documento](#Índice)
+
 ---
 ### drop_table_if_exists(schema: str, table: str) 
 
@@ -158,6 +174,8 @@ Argumentos:
 td.drop_table_if_exists(schema='nombre_schema', table='nombre_tabla')
 ```
 En el caso de que la tabla no exista, no se produce ningún error.
+
+[Volver al inicio del documento](#Índice)
 
 ---
 ### truncate_table(schema: str, table: str)
@@ -174,6 +192,8 @@ td.truncate_table(schema='nombre_schema', table='nombre_tabla')
 ```
 Ejecuta DELETE FROM nombre_schema.nombre_tabla ALL;
 
+[Volver al inicio del documento](#Índice)
+
 ---
 ### table_columns(schema: str, table: str) -> List[str]  
 Devuelve una lista con los nombres de las columnas de una tabla.  
@@ -186,6 +206,8 @@ Argumentos:
 ```python
 columnas = td.table_columns(schema='nombre_schema', table='nombre_tabla')
 ```
+
+[Volver al inicio del documento](#Índice)
 
 ---
 ### create_table_like(schema: str, table: str, schema_orig: str, table_orig: str) 
@@ -202,6 +224,8 @@ Argumentos:
 td.create_table_like(schema='nombre_schema', table='nombre_tabla', schema_orig='nombre_schema_orig', table_orig='nombre_tabla_orig')
 ```
 Crea la tabla nombre_schema.nombre_tabla con la misma estructura que nombre_schema_orig.nombre_tabla_orig. 
+
+[Volver al inicio del documento](#Índice)
 
 ---
 ### insert(df: DataFrame, schema: str, table: str, pk: str, use_odbc: bool = True, odbc_limit: int = 10000)
@@ -223,6 +247,8 @@ Inserta el dataframe df en la tabla nombre_schema.nombre_tabla.
 Si los registros existen, se produce una excepción teradatasql.IntegrityError.  
 Al insertar menos de 10000 registros, se utiliza el driver ODBC, caso contrario se utiliza fastload.  
 El límite de 10000 registros se puede modificar con el parámetro odbc_limit, y si se especifica use_odbc=False, se fuerza el uso de fastload. 
+
+[Volver al inicio del documento](#Índice)
 
 ---
 ### upsert(df: DataFrame, schema: str, table: str, pk: str, use_odbc: bool = True, odbc_limit: int = 10000, parser_limit: int = 10000)
@@ -248,6 +274,8 @@ La actualización se realiza borrando los registros existentes y volviendo a ins
 El parámetro parser_limit se utiliza para dividir la cantidad de pks en grupos de tamaño parser_limit, y así evitar errores de parser al ejecutar el delete.  
 Por lo general no es necesario modificar el parámetro parser_limit, pero si existen excepciones de parser, se puede probar con un valor mas bajo.
 
+[Volver al inicio del documento](#Índice)
+
 ---
 ### fastload(df: DataFrame, schema: str, table: str, pk: str, index: bool = False)
 
@@ -267,6 +295,8 @@ td.fastload(df=df, schema='nombre_schema', table='nombre_tabla', pk='nombre_pk')
 
 Inserta el dataframe df en la tabla nombre_schema.nombre_tabla utilizando fastload.  
 Si los registros existen, se produce una excepción teradatasql.IntegrityError.
+
+[Volver al inicio del documento](#Índice)
 
 ---
 ### retry_fastload(df: DataFrame, schema: str, table: str, pk: str, retries: int = 30, retry_sleep: int = 20)
@@ -290,6 +320,8 @@ Por defecto se realizan 30 reintentos con un tiempo de espera de 20 segundos ent
 td.retry_fastload(df=df, schema='nombre_schema', table='nombre_tabla', pk='nombre_pk')
 ```
 
+[Volver al inicio del documento](#Índice)
+
 ---
 ### diff(schema_src: str, table_src: str, schema_dst: str, table_dst: str) -> DataFrame
 
@@ -310,6 +342,8 @@ Ejecuta SELECT * FROM nombre_schema_src.nombre_tabla_src MINUS SELECT * FROM nom
 Este método se utiliza para la carga incremental de tablas que no tienen un primary key.  
 Es recomendable de todas formas, que las tablas que vayan a realizar cargas incrementales tengan un primary key.  
 
+[Volver al inicio del documento](#Índice)
+
 ---
 ### staging_insert(df: DataFrame, schema_stg: str, table_stg: str, schema_dst: str, table_dst: str, pk: str)
 
@@ -329,6 +363,8 @@ Argumentos:
 td.staging_insert(df=df, schema_stg='nombre_schema_stg', table_stg='nombre_tabla_stg', schema_dst='nombre_schema_dst', table_dst='nombre_tabla_dst', pk='nombre_pk')
 ```
 
+[Volver al inicio del documento](#Índice)
+
 ---
 ### staging_upsert(df: DataFrame, schema_stg: str, table_stg: str, schema_dst: str, table_dst: str, pk: str, parser_limit: int = 10000):
 
@@ -340,3 +376,5 @@ El parámetro parser_limit se utiliza de la misma forma que en el método upsert
 ```python
 td.staging_upsert(df=df, schema_stg='nombre_schema_stg', table_stg='nombre_tabla_stg', schema_dst='nombre_schema_dst', table_dst='nombre_tabla_dst', pk='nombre_pk')
 ```
+
+[Volver al inicio del documento](#Índice)
