@@ -209,6 +209,6 @@ with con.Session() as session:
         session.rollback()
         print(e)
 ```
-Ver tests en [SQLAlchemyTests](tests/SQLAlchemy_test.py) para mas info. 
+Ver tests en [SQLAlchemyTests](../tests/SQLAlchemyTests.py) para mas info. 
 
 [Volver al inicio](#sqlalchemy)
