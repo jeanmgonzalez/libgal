@@ -67,6 +67,7 @@ class Logger(object, metaclass=SingletonType):
 
         self._logger.setLevel(level)
         self._id = id(self)
+        self._app_name=app_name
 
         self.set_format(format_output)
 
@@ -132,7 +133,7 @@ class Logger(object, metaclass=SingletonType):
                     self._logger.removeHandler(handler)
 
             file_handler = BufferingHandler(
-                dirname + "/log_" + now.strftime("%Y-%m-%d") + ".log", encoding='utf-8')
+                dirname + f"/{self._app_name}_{os.getpid()}_" + now.strftime("%Y-%m-%d") + ".log", encoding='utf-8')
             file_handler.setFormatter(formatter)
             self._logger.addHandler(file_handler)
         else:

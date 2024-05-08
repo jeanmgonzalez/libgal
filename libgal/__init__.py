@@ -13,6 +13,7 @@ try:
     import logging  # Libreria para logs
     import os
     from pathlib import Path
+    import time
 
     # Selenium
     from selenium import webdriver
@@ -78,7 +79,7 @@ class LoggerFormatException(Exception):
     pass
 
 
-def logger(format_output="JSON", app_name=__name__):
+def logger(format_output="JSON", app_name=__name__, dir_name=None):
     """
     Descripción: Crea un nuevo logger
     Parámetro:
@@ -91,7 +92,7 @@ def logger(format_output="JSON", app_name=__name__):
         raise LoggerFormatException("Tipo de formato de Log inválido. Formatos soportados (JSON y CSV).")
 
     # Create a custom logger
-    _logger = Logger(format_output=format_output, app_name=app_name, dirname=None)
+    _logger = Logger(format_output=format_output, app_name=app_name, dirname=str(dir_name))
     _logger.set_format(format_output)
     _logger.get_logger().setLevel(logging.INFO)
 
