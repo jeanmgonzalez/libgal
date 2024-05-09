@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "libgal"
-version = "1.0.3"
+version = "1.0.4"
 authors = [
   { name="Jean Manuel González Mejía", email="ebrainding@gmail.com" },
   { name="Julián Leandro Giraldez", email="juliangiraldez@outlook.com"},
@@ -35,7 +35,8 @@ dependencies = [
     "teradataml>=17.20.0.6",
     "scikit-learn",
     "pyodbc",
-    "unidecode"
+    "unidecode",
+    "requests"
 ]
 
 [project.urls]

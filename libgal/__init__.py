@@ -14,6 +14,8 @@ try:
     import os
     from pathlib import Path
     import time
+    import requests
+    from urllib.parse import urlparse
 
     # Selenium
     from selenium import webdriver
@@ -93,7 +95,7 @@ def logger(format_output="JSON", app_name=__name__, dir_name=None):
 
     # Create a custom logger
     _logger = Logger(format_output=format_output, app_name=app_name, dirname=str(dir_name))
-    _logger.set_format(format_output)
+    #_logger.set_format(format_output)
     _logger.get_logger().setLevel(logging.INFO)
 
     return _logger.get_logger()
@@ -104,6 +106,7 @@ def shutdown_logger():
     Descripción: Cierra el log
 
     """
+    print("La función shutdown_logger() se encuentra deprecada ya que el shutdown del logging se hace automáticamente.")
     pass
 
 
@@ -158,8 +161,53 @@ def html_parser(html):
     - html (String): código html a parsear
     """
 
-    soup = BeautifulSoup(html, 'html.parser')
+    #soup = BeautifulSoup(html, 'html.parser')
+    #return soup
 
-    return soup
+    raise Exception("La función html_parser() se encuentra deprecada. Utilice la función request() en su lugar.")
 
+def request(url, intentos=1, scraping=False):
+
+    from libgal.modules.Logger import Logger
+    _logger = Logger(format_output="CSV")
+    _logger.get_logger().setLevel(logging.INFO)
+    _log=_logger.get_logger()
+    
+    sesion=requests.sessions.Session()
+
+    headers = {"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9", 
+    "Accept-Encoding": "gzip, deflate", 
+    #"Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8", 
+    "Dnt": "1", 
+    "Host": urlparse(url).netloc, 
+    "Upgrade-Insecure-Requests": "1", 
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36", 
+  }
+    
+    web=None
+
+    intento = 0
+
+    while intento < intentos:
+        try:
+
+            web=sesion.get(url ,headers=headers)
+
+            if web != None:
+
+                if scraping:
+                    return BeautifulSoup(web.content, 'html.parser')
+                else:
+                    return web
+
+        except requests.RequestException as e:
+            _log.error(f"No se puede conectar a la URL especificada: {e}")
+            intento += 1
+            time.sleep(20)
+        except requests.ConnectionError as e:
+            _log.error(f"No se puede conectar a la URL especificada: {e}")
+            intento += 1
+            time.sleep(20)
+
+    return False
 
