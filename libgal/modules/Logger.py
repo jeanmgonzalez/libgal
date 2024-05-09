@@ -5,6 +5,7 @@ import logging
 import os
 import datetime
 from typing import Optional
+import unidecode
 
 DEFAULT_FILE_BUFFER_SIZE = 1024 * 1024  # 1 MB
 
@@ -133,7 +134,7 @@ class Logger(object, metaclass=SingletonType):
                     self._logger.removeHandler(handler)
 
             file_handler = BufferingHandler(
-                dirname + f"/{self._app_name}_{os.getpid()}_" + now.strftime("%Y-%m-%d") + ".log", encoding='utf-8')
+                dirname + f"/{unidecode.unidecode(self._app_name).replace(' ','_').lower()}_{os.getpid()}_" + now.strftime("%Y-%m-%d") + ".log", encoding='utf-8')
             file_handler.setFormatter(formatter)
             self._logger.addHandler(file_handler)
         else:
