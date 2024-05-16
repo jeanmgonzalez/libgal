@@ -166,7 +166,7 @@ def html_parser(html):
 
     raise Exception("La función html_parser() se encuentra deprecada. Utilice la función request() en su lugar.")
 
-def request(url, intentos=1, scraping=False):
+def request(url, intentos=1, scraping=False, SSL=True):
 
     from libgal.modules.Logger import Logger
     _logger = Logger(format_output="CSV")
@@ -191,7 +191,7 @@ def request(url, intentos=1, scraping=False):
     while intento < intentos:
         try:
 
-            web=sesion.get(url ,headers=headers)
+            web=sesion.get(url ,headers=headers, verify=SSL)
 
             if web != None:
 
@@ -210,4 +210,3 @@ def request(url, intentos=1, scraping=False):
             time.sleep(20)
 
     return False
-
