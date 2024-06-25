@@ -30,7 +30,7 @@ dependencies = [
 	"Brotli",
     "python-dotenv>=0.10.2",
 	"bs4",
-    "pandas==2.0.0",
+    "pandas==2.1.4",
     "numpy>=1.26.1",
     "teradataml>=17.20.0.6",
     "scikit-learn",
