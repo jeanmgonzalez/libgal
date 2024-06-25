@@ -17,7 +17,7 @@ Librería para agilizar el desarrollo de productos de datos en Python.
   - [Teradata ODBC](docs/SimpleTeradata.md)
   - [SQLAlchemy](docs/SQLAlchemy.md)
   - [Selenium Web Browser Firefox](docs/Selenium.md)
-  - [HTML Parser](docs/HTMLParser.md)
+  - [Request](docs/Request.md)
   - [Utilidades del sistema de archivos](docs/FSUtils.md)
   - [Funciones auxiliares](docs/Utils.md)
   - [Contacto](#contacto)
